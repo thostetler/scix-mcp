@@ -195,12 +195,13 @@ export async function manageDocuments(
   client: SciXAPIClient,
   input: ManageDocumentsInput
 ): Promise<string> {
+  // ADS/SciX expects `bibcode` key and document ops on /biblib/documents/{id}
   const payload = {
-    bibcodes: input.bibcodes,
+    bibcode: input.bibcodes,
     action: input.action
   };
 
-  const data = await client.post(`biblib/libraries/${input.library_id}`, payload);
+  const data = await client.post(`biblib/documents/${input.library_id}`, payload);
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(data, null, 2);
@@ -221,7 +222,8 @@ export async function addDocumentsByQuery(
     rows: input.rows
   };
 
-  const data = await client.post(`biblib/libraries/${input.library_id}/query`, payload);
+  // ADS/SciX query add endpoint lives under /biblib/documents/{id}/query
+  const data = await client.post(`biblib/documents/${input.library_id}/query`, payload);
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(data, null, 2);
