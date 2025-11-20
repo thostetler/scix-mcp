@@ -68,7 +68,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: 'ads_search',
+        name: 'search',
         description: 'Search NASA ADS for astronomical literature. Supports full Solr query syntax including author:"Last, F.", title:keyword, abstract:keyword, year:2020-2023, and Boolean operators (AND, OR, NOT).',
         inputSchema: {
           type: 'object',
@@ -110,7 +110,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_paper',
+        name: 'get_paper',
         description: 'Get detailed information about a specific paper by its ADS bibcode (e.g., 2019ApJ...886..145M).',
         inputSchema: {
           type: 'object',
@@ -135,7 +135,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_metrics',
+        name: 'get_metrics',
         description: 'Get citation metrics including h-index, citation counts, and paper statistics for a list of bibcodes.',
         inputSchema: {
           type: 'object',
@@ -161,7 +161,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_citations',
+        name: 'get_citations',
         description: 'Get papers that cite a given paper (forward citations).',
         inputSchema: {
           type: 'object',
@@ -191,7 +191,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_references',
+        name: 'get_references',
         description: 'Get papers referenced by a given paper (backward citations).',
         inputSchema: {
           type: 'object',
@@ -221,7 +221,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_export',
+        name: 'export',
         description: 'Export citations in various formats (BibTeX, AASTeX, EndNote, MEDLARS).',
         inputSchema: {
           type: 'object',
@@ -247,7 +247,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_libraries',
+        name: 'get_libraries',
         description: 'Get all libraries for the authenticated user. Can filter by type (all, owner, collaborator).',
         inputSchema: {
           type: 'object',
@@ -273,7 +273,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_library',
+        name: 'get_library',
         description: 'Get details about a specific library including metadata and list of documents.',
         inputSchema: {
           type: 'object',
@@ -298,7 +298,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_create_library',
+        name: 'create_library',
         description: 'Create a new library with optional initial documents.',
         inputSchema: {
           type: 'object',
@@ -337,7 +337,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_delete_library',
+        name: 'delete_library',
         description: 'Delete a library permanently.',
         inputSchema: {
           type: 'object',
@@ -362,7 +362,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_edit_library',
+        name: 'edit_library',
         description: 'Edit library metadata (name, description, public status).',
         inputSchema: {
           type: 'object',
@@ -399,7 +399,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_manage_documents',
+        name: 'manage_documents',
         description: 'Add or remove documents from a library.',
         inputSchema: {
           type: 'object',
@@ -434,7 +434,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_add_documents_by_query',
+        name: 'add_documents_by_query',
         description: 'Add documents to a library from an ADS search query.',
         inputSchema: {
           type: 'object',
@@ -468,7 +468,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_library_operation',
+        name: 'library_operation',
         description: 'Perform set operations on libraries (union, intersection, difference, copy, empty).',
         inputSchema: {
           type: 'object',
@@ -511,7 +511,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_permissions',
+        name: 'get_permissions',
         description: 'Get permission information for a library.',
         inputSchema: {
           type: 'object',
@@ -536,7 +536,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_update_permissions',
+        name: 'update_permissions',
         description: 'Grant or modify permissions for a user on a library.',
         inputSchema: {
           type: 'object',
@@ -570,7 +570,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_transfer_library',
+        name: 'transfer_library',
         description: 'Transfer ownership of a library to another user.',
         inputSchema: {
           type: 'object',
@@ -599,7 +599,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_get_annotation',
+        name: 'get_annotation',
         description: 'Get annotation/note for a document in a library.',
         inputSchema: {
           type: 'object',
@@ -628,7 +628,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_manage_annotation',
+        name: 'manage_annotation',
         description: 'Add or update an annotation/note for a document in a library.',
         inputSchema: {
           type: 'object',
@@ -661,7 +661,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'ads_delete_annotation',
+        name: 'delete_annotation',
         description: 'Delete an annotation/note for a document in a library.',
         inputSchema: {
           type: 'object',
@@ -698,7 +698,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case 'ads_search': {
+      case 'search': {
         const input = SearchInputSchema.parse(args);
         const result = await search(client, input);
         return {
@@ -706,7 +706,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_paper': {
+      case 'get_paper': {
         const input = GetPaperInputSchema.parse(args);
         const result = await getPaper(client, input);
         return {
@@ -714,7 +714,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_metrics': {
+      case 'get_metrics': {
         const input = MetricsInputSchema.parse(args);
         const result = await getMetrics(client, input);
         return {
@@ -722,7 +722,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_citations': {
+      case 'get_citations': {
         const input = CitationsInputSchema.parse(args);
         const result = await getCitations(client, input);
         return {
@@ -730,7 +730,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_references': {
+      case 'get_references': {
         const input = CitationsInputSchema.parse(args);
         const result = await getReferences(client, input);
         return {
@@ -738,7 +738,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_export': {
+      case 'export': {
         const input = ExportInputSchema.parse(args);
         const result = await exportCitations(client, input);
         return {
@@ -746,7 +746,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_libraries': {
+      case 'get_libraries': {
         const input = GetLibrariesInputSchema.parse(args);
         const result = await getLibraries(client, input);
         return {
@@ -754,7 +754,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_library': {
+      case 'get_library': {
         const input = GetLibraryInputSchema.parse(args);
         const result = await getLibrary(client, input);
         return {
@@ -762,7 +762,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_create_library': {
+      case 'create_library': {
         const input = CreateLibraryInputSchema.parse(args);
         const result = await createLibrary(client, input);
         return {
@@ -770,7 +770,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_delete_library': {
+      case 'delete_library': {
         const input = DeleteLibraryInputSchema.parse(args);
         const result = await deleteLibrary(client, input);
         return {
@@ -778,7 +778,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_edit_library': {
+      case 'edit_library': {
         const input = EditLibraryInputSchema.parse(args);
         const result = await editLibrary(client, input);
         return {
@@ -786,7 +786,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_manage_documents': {
+      case 'manage_documents': {
         const input = ManageDocumentsInputSchema.parse(args);
         const result = await manageDocuments(client, input);
         return {
@@ -794,7 +794,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_add_documents_by_query': {
+      case 'add_documents_by_query': {
         const input = AddDocumentsByQueryInputSchema.parse(args);
         const result = await addDocumentsByQuery(client, input);
         return {
@@ -802,7 +802,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_library_operation': {
+      case 'library_operation': {
         const input = LibraryOperationInputSchema.parse(args);
         const result = await libraryOperation(client, input);
         return {
@@ -810,7 +810,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_permissions': {
+      case 'get_permissions': {
         const input = GetPermissionsInputSchema.parse(args);
         const result = await getPermissions(client, input);
         return {
@@ -818,7 +818,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_update_permissions': {
+      case 'update_permissions': {
         const input = UpdatePermissionsInputSchema.parse(args);
         const result = await updatePermissions(client, input);
         return {
@@ -826,7 +826,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_transfer_library': {
+      case 'transfer_library': {
         const input = TransferLibraryInputSchema.parse(args);
         const result = await transferLibrary(client, input);
         return {
@@ -834,7 +834,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_get_annotation': {
+      case 'get_annotation': {
         const input = GetAnnotationInputSchema.parse(args);
         const result = await getAnnotation(client, input);
         return {
@@ -842,7 +842,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_manage_annotation': {
+      case 'manage_annotation': {
         const input = ManageAnnotationInputSchema.parse(args);
         const result = await manageAnnotation(client, input);
         return {
@@ -850,7 +850,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'ads_delete_annotation': {
+      case 'delete_annotation': {
         const input = DeleteAnnotationInputSchema.parse(args);
         const result = await deleteAnnotation(client, input);
         return {
