@@ -1,10 +1,10 @@
 {
-  "name": "ads-mcp-server",
+  "name": "scix-mcp-server",
   "version": "1.0.0",
   "description": "MCP server for NASA Astrophysics Data System API",
   "type": "module",
   "bin": {
-    "ads-mcp-server": "./build/index.js"
+    "scix-mcp-server": "./build/index.js"
   },
   "files": [
     "build",
