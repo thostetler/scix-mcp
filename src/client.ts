@@ -1,12 +1,12 @@
-import { getAPIKey, ADS_API_BASE, REQUEST_TIMEOUT } from './config.js';
+import { getAPIKey, SCIX_API_BASE, REQUEST_TIMEOUT } from './config.js';
 
-export class ADSAPIClient {
+export class SciXAPIClient {
   private apiKey: string;
   private baseURL: string;
 
   constructor() {
     this.apiKey = getAPIKey();
-    this.baseURL = ADS_API_BASE;
+    this.baseURL = SCIX_API_BASE;
   }
 
   async get(endpoint: string, params?: Record<string, any>): Promise<any> {
@@ -40,7 +40,7 @@ export class ADSAPIClient {
       clearTimeout(timeout);
 
       if (response.status === 401) {
-        throw new Error('Authentication failed. Check ADS_DEV_KEY environment variable. Get your key from https://ui.adsabs.harvard.edu/user/settings/token');
+        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable. Get your key from https://scixplorer.org/user/settings/token');
       }
 
       if (response.status === 404) {
@@ -52,7 +52,7 @@ export class ADSAPIClient {
       }
 
       if (!response.ok) {
-        throw new Error(`ADS API error: ${response.status} ${response.statusText}`);
+        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
       }
 
       return await response.json();
@@ -84,7 +84,7 @@ export class ADSAPIClient {
       clearTimeout(timeout);
 
       if (response.status === 401) {
-        throw new Error('Authentication failed. Check ADS_DEV_KEY environment variable.');
+        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable.');
       }
 
       if (response.status === 404) {
@@ -96,7 +96,7 @@ export class ADSAPIClient {
       }
 
       if (!response.ok) {
-        throw new Error(`ADS API error: ${response.status} ${response.statusText}`);
+        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
       }
 
       return await response.json();
@@ -128,7 +128,7 @@ export class ADSAPIClient {
       clearTimeout(timeout);
 
       if (response.status === 401) {
-        throw new Error('Authentication failed. Check ADS_DEV_KEY environment variable.');
+        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable.');
       }
 
       if (response.status === 404) {
@@ -140,7 +140,7 @@ export class ADSAPIClient {
       }
 
       if (!response.ok) {
-        throw new Error(`ADS API error: ${response.status} ${response.statusText}`);
+        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
       }
 
       return await response.json();
@@ -171,7 +171,7 @@ export class ADSAPIClient {
       clearTimeout(timeout);
 
       if (response.status === 401) {
-        throw new Error('Authentication failed. Check ADS_DEV_KEY environment variable.');
+        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable.');
       }
 
       if (response.status === 404) {
@@ -183,7 +183,7 @@ export class ADSAPIClient {
       }
 
       if (!response.ok) {
-        throw new Error(`ADS API error: ${response.status} ${response.statusText}`);
+        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
       }
 
       return await response.json();

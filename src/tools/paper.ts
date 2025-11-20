@@ -1,9 +1,9 @@
-import { ADSAPIClient } from '../client.js';
+import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
 import { GetPaperInput, ResponseFormat } from '../types.js';
 import { formatPaperMarkdown } from '../formatters.js';
 
-export async function getPaper(client: ADSAPIClient, input: GetPaperInput): Promise<string> {
+export async function getPaper(client: SciXAPIClient, input: GetPaperInput): Promise<string> {
   const params = {
     q: `bibcode:${input.bibcode}`,
     fl: DEFAULT_FIELDS,

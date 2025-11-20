@@ -1,6 +1,6 @@
-# NASA ADS MCP Server
+# NASA SciX MCP Server
 
-A production-grade Model Context Protocol (MCP) server for the NASA Astrophysics Data System (ADS) API. This server enables LLMs to search astronomical literature, retrieve paper metadata, analyze citation metrics, and export bibliographic data.
+A production-grade Model Context Protocol (MCP) server for the NASA Astrophysics Data System (SciX) API. This server enables LLMs to search astronomical literature, retrieve paper metadata, analyze citation metrics, and export bibliographic data.
 
 ## Features
 
@@ -22,12 +22,12 @@ npm run build
 
 ### Get an API Key
 
-1. Create an account at [ADS](https://ui.adsabs.harvard.edu/)
-2. Generate an API token at https://ui.adsabs.harvard.edu/user/settings/token
+1. Create an account at [SciX](https://scixplorer.org/)
+2. Generate an API token at https://scixplorer.org/user/settings/token
 3. Set the environment variable:
 
 ```bash
-export ADS_DEV_KEY=your_api_key_here
+export SCIX_API_TOKEN=your_api_key_here
 ```
 
 Or create a `.env` file:
@@ -45,10 +45,10 @@ Add to your MCP client configuration (e.g., Claude Desktop `config.json`):
 {
   "mcpServers": {
     "ads": {
-      "command": "node",
-      "args": ["/path/to/scix-mcp/build/index.js"],
+      "command": "npx",
+      "args": ["scix-mcp-server"],
       "env": {
-        "ADS_DEV_KEY": "your_api_key_here"
+        "SCIX_API_TOKEN": "your_api_key_here"
       }
     }
   }
@@ -57,11 +57,12 @@ Add to your MCP client configuration (e.g., Claude Desktop `config.json`):
 
 ## Available Tools
 
-### ads_search
+### search
 
-Search the ADS database with full Solr query syntax.
+Search the SciX database with full Solr query syntax.
 
 **Parameters:**
+
 - `query` (string, required): Search query
 - `rows` (number, optional): Results to return (1-100, default 10)
 - `start` (number, optional): Pagination offset (default 0)
@@ -69,6 +70,7 @@ Search the ADS database with full Solr query syntax.
 - `response_format` (string, optional): "markdown" or "json" (default "markdown")
 
 **Example queries:**
+
 ```
 author:"Einstein, A." title:relativity
 black holes year:2020-2023
@@ -76,47 +78,52 @@ author:^Smith (first author only)
 dark energy AND galaxy clusters
 ```
 
-### ads_get_paper
+### get_paper
 
 Get detailed information about a specific paper.
 
 **Parameters:**
-- `bibcode` (string, required): ADS bibcode (e.g., "2019ApJ...886..145M")
+
+- `bibcode` (string, required): SciX bibcode (e.g., "2019ApJ...886..145M")
 - `response_format` (string, optional): "markdown" or "json"
 
-### ads_get_metrics
+### get_metrics
 
 Calculate citation metrics for a set of papers.
 
 **Parameters:**
+
 - `bibcodes` (array, required): List of bibcodes (1-2000)
 - `response_format` (string, optional): "markdown" or "json"
 
 **Returns:** h-index, g-index, total citations, paper counts, usage statistics
 
-### ads_get_citations
+### get_citations
 
 Get papers that cite a given paper (forward citations).
 
 **Parameters:**
-- `bibcode` (string, required): ADS bibcode
+
+- `bibcode` (string, required): SciX bibcode
 - `rows` (number, optional): Number of citations (1-100, default 20)
 - `response_format` (string, optional): "markdown" or "json"
 
-### ads_get_references
+### get_references
 
 Get papers referenced by a given paper (backward citations).
 
 **Parameters:**
-- `bibcode` (string, required): ADS bibcode
+
+- `bibcode` (string, required): SciX bibcode
 - `rows` (number, optional): Number of references (1-100, default 20)
 - `response_format` (string, optional): "markdown" or "json"
 
-### ads_export
+### export
 
 Export citations in various formats.
 
 **Parameters:**
+
 - `bibcodes` (array, required): List of bibcodes (1-2000)
 - `format` (string, required): "bibtex", "aastex", "endnote", or "medlars"
 
@@ -128,21 +135,21 @@ Export citations in various formats.
 - Rate limit info is returned in response headers
 - Contact adshelp@cfa.harvard.edu for higher limits
 
-## ADS Search Syntax
+## SciX Search Syntax
 
-The ADS search supports powerful query syntax:
+The SciX search supports powerful query syntax:
 
-| Syntax | Description | Example |
-|--------|-------------|---------|
-| `author:"Last, F."` | Exact author | `author:"Huchra, John"` |
-| `author:^Last` | First author | `author:^Smith` |
-| `title:keyword` | Title search | `title:exoplanet` |
-| `abstract:keyword` | Abstract search | `abstract:"dark matter"` |
-| `year:YYYY-YYYY` | Year range | `year:2020-2023` |
-| `property:refereed` | Refereed only | `property:refereed` |
-| `citations(bibcode:X)` | Papers citing X | `citations(bibcode:2019ApJ...)` |
+| Syntax                  | Description       | Example                          |
+| ----------------------- | ----------------- | -------------------------------- |
+| `author:"Last, F."`     | Exact author      | `author:"Huchra, John"`          |
+| `author:^Last`          | First author      | `author:^Smith`                  |
+| `title:keyword`         | Title search      | `title:exoplanet`                |
+| `abstract:keyword`      | Abstract search   | `abstract:"dark matter"`         |
+| `year:YYYY-YYYY`        | Year range        | `year:2020-2023`                 |
+| `property:refereed`     | Refereed only     | `property:refereed`              |
+| `citations(bibcode:X)`  | Papers citing X   | `citations(bibcode:2019ApJ...)`  |
 | `references(bibcode:X)` | Papers cited by X | `references(bibcode:2019ApJ...)` |
-| `AND`, `OR`, `NOT` | Boolean operators | `black holes AND galaxy` |
+| `AND`, `OR`, `NOT`      | Boolean operators | `black holes AND galaxy`         |
 
 ## Development
 
@@ -162,7 +169,7 @@ npx @modelcontextprotocol/inspector node build/index.js
 ```
 src/
 ├── index.ts          # Main server entry point
-├── client.ts         # ADS API client wrapper
+├── client.ts         # SciX API client wrapper
 ├── types.ts          # TypeScript/Zod type definitions
 ├── formatters.ts     # Response formatting utilities
 ├── config.ts         # Configuration constants
@@ -174,42 +181,56 @@ src/
     └── export.ts     # Export tool
 ```
 
+### Library tools
+
+- `get_libraries` / `get_library`: List and inspect libraries
+- `create_library` / `delete_library` / `edit_library`: Manage library metadata
+- `manage_documents`: Add/remove bibcodes to a library
+- `add_documents_by_query`: Add results from a search query to a library
+- `library_operation`: Union/intersection/difference/copy/empty on libraries
+- `get_permissions` / `update_permissions` / `transfer_library`: Manage sharing
+- `get_annotation` / `manage_annotation` / `delete_annotation`: Handle notes on documents
+
 ## Example Usage
 
 ### Search for papers
+
 ```
-Use ads_search with query "supernova 2023" to find recent supernova papers
+Use search with query "supernova 2023" to find recent supernova papers
 ```
 
 ### Get paper details
+
 ```
-Use ads_get_paper with bibcode "2023ApJ...950..123S"
+Use get_paper with bibcode "2023ApJ...950..123S"
 ```
 
 ### Calculate metrics
+
 ```
-Use ads_get_metrics with bibcodes ["2023ApJ...950..123S", "2022MNRAS.517.1234T"]
+Use get_metrics with bibcodes ["2023ApJ...950..123S", "2022MNRAS.517.1234T"]
 ```
 
 ### Export citations
+
 ```
-Use ads_export with bibcodes ["2023ApJ...950..123S"] and format "bibtex"
+Use export with bibcodes ["2023ApJ...950..123S"] and format "bibtex"
 ```
 
 ## Error Handling
 
 The server provides clear error messages:
 
-- **401**: Invalid API key - check `ADS_DEV_KEY`
+- **401**: Invalid API key - check `SCIX_API_TOKEN`
 - **404**: Resource not found - check bibcode format
 - **429**: Rate limit exceeded - wait until reset
 - **Timeout**: Request took > 30 seconds
 
 ## Resources
 
-- [ADS Homepage](https://ui.adsabs.harvard.edu/)
-- [ADS API Documentation](https://github.com/adsabs/adsabs-dev-api)
-- [ADS Search Syntax](https://adsabs.github.io/help/search/search-syntax)
+- [SciX Homepage](https://scixplorer.org/)
+- [SciX API Documentation](https://github.com/adsabs/adsabs-dev-api)
+- [SciX Search Syntax](https://adsabs.github.io/help/search/search-syntax)
 - [MCP Documentation](https://modelcontextprotocol.io/)
 
 ## License

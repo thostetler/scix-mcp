@@ -1,7 +1,7 @@
-import { ADSAPIClient } from '../client.js';
+import { SciXAPIClient } from '../client.js';
 import { ExportInput } from '../types.js';
 
-export async function exportCitations(client: ADSAPIClient, input: ExportInput): Promise<string> {
+export async function exportCitations(client: SciXAPIClient, input: ExportInput): Promise<string> {
   const data = {
     bibcode: input.bibcodes
   };

@@ -14,7 +14,7 @@ export enum SortOrder {
 }
 
 export const SearchInputSchema = z.object({
-  query: z.string().min(1).max(1000).describe('ADS search query using Solr syntax'),
+  query: z.string().min(1).max(1000).describe('SciX search query using Solr syntax'),
   rows: z.number().int().min(1).max(100).default(10).describe('Number of results to return'),
   start: z.number().int().min(0).default(0).describe('Starting offset for pagination'),
   sort: z.nativeEnum(SortOrder).default(SortOrder.RELEVANCE).describe('Sort order for results'),
@@ -22,7 +22,7 @@ export const SearchInputSchema = z.object({
 });
 
 export const GetPaperInputSchema = z.object({
-  bibcode: z.string().min(1).max(19).describe('ADS bibcode identifier'),
+  bibcode: z.string().min(1).max(19).describe('SciX bibcode identifier'),
   response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
@@ -32,7 +32,7 @@ export const MetricsInputSchema = z.object({
 });
 
 export const CitationsInputSchema = z.object({
-  bibcode: z.string().min(1).max(19).describe('ADS bibcode identifier'),
+  bibcode: z.string().min(1).max(19).describe('SciX bibcode identifier'),
   rows: z.number().int().min(1).max(100).default(20).describe('Number of citations to return'),
   response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
@@ -122,7 +122,7 @@ export const ManageDocumentsInputSchema = z.object({
 // Add Documents by Query
 export const AddDocumentsByQueryInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
-  query: z.string().min(1).describe('ADS search query'),
+  query: z.string().min(1).describe('SciX search query'),
   rows: z.number().int().min(1).max(2000).default(25).describe('Number of results to add'),
   response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });

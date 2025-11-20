@@ -1,9 +1,9 @@
-import { ADSAPIClient } from '../client.js';
+import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
 import { SearchInput, ResponseFormat } from '../types.js';
 import { formatPapersListMarkdown } from '../formatters.js';
 
-export async function search(client: ADSAPIClient, input: SearchInput): Promise<string> {
+export async function search(client: SciXAPIClient, input: SearchInput): Promise<string> {
   const params = {
     q: input.query,
     fl: DEFAULT_FIELDS,

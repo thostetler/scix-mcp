@@ -1,9 +1,9 @@
-import { ADSAPIClient } from '../client.js';
+import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
 import { CitationsInput, ResponseFormat } from '../types.js';
 import { formatCitationNetworkMarkdown } from '../formatters.js';
 
-export async function getCitations(client: ADSAPIClient, input: CitationsInput): Promise<string> {
+export async function getCitations(client: SciXAPIClient, input: CitationsInput): Promise<string> {
   const params = {
     q: `citations(bibcode:${input.bibcode})`,
     fl: DEFAULT_FIELDS,
@@ -22,7 +22,7 @@ export async function getCitations(client: ADSAPIClient, input: CitationsInput):
   return formatCitationNetworkMarkdown(docs, `Papers citing ${input.bibcode}`, numFound);
 }
 
-export async function getReferences(client: ADSAPIClient, input: CitationsInput): Promise<string> {
+export async function getReferences(client: SciXAPIClient, input: CitationsInput): Promise<string> {
   const params = {
     q: `references(bibcode:${input.bibcode})`,
     fl: DEFAULT_FIELDS,

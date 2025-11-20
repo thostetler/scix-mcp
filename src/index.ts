@@ -6,7 +6,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { ADSAPIClient } from './client.js';
+import { SciXAPIClient } from './client.js';
 import { search } from './tools/search.js';
 import { getPaper } from './tools/paper.js';
 import { getMetrics } from './tools/metrics.js';
@@ -62,20 +62,20 @@ const server = new Server(
   }
 );
 
-const client = new ADSAPIClient();
+const client = new SciXAPIClient();
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
         name: 'search',
-        description: 'Search NASA ADS for astronomical literature. Supports full Solr query syntax including author:"Last, F.", title:keyword, abstract:keyword, year:2020-2023, and Boolean operators (AND, OR, NOT).',
+        description: 'Search SciX for astronomical literature. Supports full Solr query syntax including author:"Last, F.", title:keyword, abstract:keyword, year:2020-2023, and Boolean operators (AND, OR, NOT).',
         inputSchema: {
           type: 'object',
           properties: {
             query: {
               type: 'string',
-              description: 'Search query using ADS/Solr syntax',
+              description: 'Search query using SciX/Solr syntax',
             },
             rows: {
               type: 'number',
@@ -111,13 +111,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'get_paper',
-        description: 'Get detailed information about a specific paper by its ADS bibcode (e.g., 2019ApJ...886..145M).',
+        description: 'Get detailed information about a specific paper by its SciX bibcode (e.g., 2019ApJ...886..145M).',
         inputSchema: {
           type: 'object',
           properties: {
             bibcode: {
               type: 'string',
-              description: 'ADS bibcode identifier',
+              description: 'SciX bibcode identifier',
             },
             response_format: {
               type: 'string',
@@ -143,7 +143,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             bibcodes: {
               type: 'array',
               items: { type: 'string' },
-              description: 'List of ADS bibcodes (1-2000)',
+              description: 'List of SciX bibcodes (1-2000)',
             },
             response_format: {
               type: 'string',
@@ -168,7 +168,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             bibcode: {
               type: 'string',
-              description: 'ADS bibcode identifier',
+              description: 'SciX bibcode identifier',
             },
             rows: {
               type: 'number',
@@ -198,7 +198,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             bibcode: {
               type: 'string',
-              description: 'ADS bibcode identifier',
+              description: 'SciX bibcode identifier',
             },
             rows: {
               type: 'number',
@@ -229,7 +229,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             bibcodes: {
               type: 'array',
               items: { type: 'string' },
-              description: 'List of ADS bibcodes to export (1-2000)',
+              description: 'List of SciX bibcodes to export (1-2000)',
             },
             format: {
               type: 'string',
@@ -435,7 +435,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'add_documents_by_query',
-        description: 'Add documents to a library from an ADS search query.',
+        description: 'Add documents to a library from a SciX search query.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -445,7 +445,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             query: {
               type: 'string',
-              description: 'ADS search query',
+              description: 'SciX search query',
             },
             rows: {
               type: 'number',
@@ -877,7 +877,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('NASA ADS MCP Server running on stdio');
+  console.error('SciX MCP Server running on stdio');
 }
 
 main().catch((error) => {

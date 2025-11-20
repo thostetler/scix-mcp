@@ -1,4 +1,4 @@
-import { ADSAPIClient } from '../client.js';
+import { SciXAPIClient } from '../client.js';
 import {
   GetLibrariesInput,
   GetLibraryInput,
@@ -42,7 +42,7 @@ interface Annotation {
 
 // Get all libraries
 export async function getLibraries(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: GetLibrariesInput
 ): Promise<string> {
   const params: Record<string, any> = {};
@@ -82,7 +82,7 @@ export async function getLibraries(
 
 // Get single library
 export async function getLibrary(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: GetLibraryInput
 ): Promise<string> {
   const data = await client.get(`biblib/libraries/${input.library_id}`);
@@ -118,7 +118,7 @@ export async function getLibrary(
 
 // Create library
 export async function createLibrary(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: CreateLibraryInput
 ): Promise<string> {
   const payload: Record<string, any> = {
@@ -147,7 +147,7 @@ export async function createLibrary(
 
 // Delete library
 export async function deleteLibrary(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: DeleteLibraryInput
 ): Promise<string> {
   await client.delete(`biblib/libraries/${input.library_id}`);
@@ -161,7 +161,7 @@ export async function deleteLibrary(
 
 // Edit library metadata
 export async function editLibrary(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: EditLibraryInput
 ): Promise<string> {
   const payload: Record<string, any> = {};
@@ -192,7 +192,7 @@ export async function editLibrary(
 
 // Manage documents (add/remove)
 export async function manageDocuments(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: ManageDocumentsInput
 ): Promise<string> {
   const payload = {
@@ -213,7 +213,7 @@ export async function manageDocuments(
 
 // Add documents by query
 export async function addDocumentsByQuery(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: AddDocumentsByQueryInput
 ): Promise<string> {
   const payload = {
@@ -234,7 +234,7 @@ export async function addDocumentsByQuery(
 
 // Library operation (union, intersection, difference, copy, empty)
 export async function libraryOperation(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: LibraryOperationInput
 ): Promise<string> {
   const payload: Record<string, any> = {
@@ -272,7 +272,7 @@ export async function libraryOperation(
 
 // Get permissions
 export async function getPermissions(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: GetPermissionsInput
 ): Promise<string> {
   const data = await client.get(`biblib/permissions/${input.library_id}`);
@@ -301,7 +301,7 @@ export async function getPermissions(
 
 // Update permissions
 export async function updatePermissions(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: UpdatePermissionsInput
 ): Promise<string> {
   const payload = {
@@ -322,7 +322,7 @@ export async function updatePermissions(
 
 // Transfer library
 export async function transferLibrary(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: TransferLibraryInput
 ): Promise<string> {
   const payload = {
@@ -340,7 +340,7 @@ export async function transferLibrary(
 
 // Get annotation
 export async function getAnnotation(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: GetAnnotationInput
 ): Promise<string> {
   const data = await client.get(`biblib/libraries/${input.library_id}/notes/${input.bibcode}`);
@@ -363,7 +363,7 @@ export async function getAnnotation(
 
 // Add/Update annotation
 export async function manageAnnotation(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: ManageAnnotationInput
 ): Promise<string> {
   const payload = {
@@ -381,7 +381,7 @@ export async function manageAnnotation(
 
 // Delete annotation
 export async function deleteAnnotation(
-  client: ADSAPIClient,
+  client: SciXAPIClient,
   input: DeleteAnnotationInput
 ): Promise<string> {
   await client.delete(`biblib/libraries/${input.library_id}/notes/${input.bibcode}`);
