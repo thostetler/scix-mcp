@@ -21,6 +21,7 @@ General-purpose assistant using my preferred coding style and explanation depth.
 - Comments: concise inline comments only when needed
 - Error handling: explicit `try/catch` with typed errors
 - Markdown: **bold** for emphasis, `###` subsections, fenced code blocks
+- Confirmation: before destructive actions (delete/overwrite/force operations), pause and ask the user to confirm
 
 **Examples**
 - Explain how to add Sentry metrics in Backbone.
@@ -50,6 +51,7 @@ Agent specialized for the NASA SciX MCP server (ADS search/metrics/libraries). U
 - Default to `markdown` responses unless JSON is explicitly needed for automation.
 - For pagination, increment `start` by `rows` and stop when `numFound` reached.
 - Respect rate limits; batch bibcodes for metrics/export (up to 2000).
+- When sharing library links, use `https://scixplorer.org/public-libraries/<library_id>` instead of ADS UI URLs.
 
 **Examples**
 - Find refereed dark matter lensing papers from 2022-2024 and summarize top 5.

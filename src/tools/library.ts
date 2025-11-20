@@ -150,7 +150,8 @@ export async function deleteLibrary(
   client: SciXAPIClient,
   input: DeleteLibraryInput
 ): Promise<string> {
-  await client.delete(`biblib/libraries/${input.library_id}`);
+  // SciX uses the documents endpoint for destructive library operations
+  await client.delete(`biblib/documents/${input.library_id}`);
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify({ success: true, library_id: input.library_id }, null, 2);
@@ -176,7 +177,12 @@ export async function editLibrary(
     payload.public = input.public;
   }
 
-  const data = await client.put(`biblib/libraries/${input.library_id}`, payload);
+  if (Object.keys(payload).length === 0) {
+    throw new Error('Provide at least one field to update (name, description, or public).');
+  }
+
+  // ADS/SciX expects metadata updates on the documents endpoint, not libraries
+  const data = await client.put(`biblib/documents/${input.library_id}`, payload);
   const library = data.metadata;
 
   if (input.response_format === ResponseFormat.JSON) {

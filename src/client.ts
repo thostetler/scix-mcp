@@ -186,7 +186,9 @@ export class SciXAPIClient {
         throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json();
+      // Some endpoints (e.g., library delete) may return 204/empty bodies
+      const text = await response.text();
+      return text ? JSON.parse(text) : {};
     } catch (error: any) {
       clearTimeout(timeout);
       if (error.name === 'AbortError') {

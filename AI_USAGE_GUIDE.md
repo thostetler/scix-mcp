@@ -102,6 +102,7 @@ citations(bibcode:X)      # Papers citing X
 **delete_library** - Permanent deletion
 
 - Destructive operation, cannot be undone
+- Agents should pause and confirm with the user before invoking this or any destructive action
 
 ### 5. Document Management
 
@@ -141,6 +142,9 @@ citations(bibcode:X)      # Papers citing X
 - Requires new owner email
 - Original owner becomes admin
 
+**Sharing links**
+
+- Public libraries should be shared using `https://scixplorer.org/public-libraries/<library_id>` rather than ADS UI URLs.
 ### 7. Annotations
 
 **get_annotation** - Retrieve note for paper in library
