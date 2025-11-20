@@ -13,11 +13,41 @@ import { getMetrics } from './tools/metrics.js';
 import { getCitations, getReferences } from './tools/citations.js';
 import { exportCitations } from './tools/export.js';
 import {
+  getLibraries,
+  getLibrary,
+  createLibrary,
+  deleteLibrary,
+  editLibrary,
+  manageDocuments,
+  addDocumentsByQuery,
+  libraryOperation,
+  getPermissions,
+  updatePermissions,
+  transferLibrary,
+  getAnnotation,
+  manageAnnotation,
+  deleteAnnotation
+} from './tools/library.js';
+import {
   SearchInputSchema,
   GetPaperInputSchema,
   MetricsInputSchema,
   CitationsInputSchema,
   ExportInputSchema,
+  GetLibrariesInputSchema,
+  GetLibraryInputSchema,
+  CreateLibraryInputSchema,
+  DeleteLibraryInputSchema,
+  EditLibraryInputSchema,
+  ManageDocumentsInputSchema,
+  AddDocumentsByQueryInputSchema,
+  LibraryOperationInputSchema,
+  GetPermissionsInputSchema,
+  UpdatePermissionsInputSchema,
+  TransferLibraryInputSchema,
+  GetAnnotationInputSchema,
+  ManageAnnotationInputSchema,
+  DeleteAnnotationInputSchema
 } from './types.js';
 
 const server = new Server(
@@ -216,6 +246,449 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           openWorldHint: true,
         },
       },
+      {
+        name: 'ads_get_libraries',
+        description: 'Get all libraries for the authenticated user. Can filter by type (all, owner, collaborator).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['all', 'owner', 'collaborator'],
+              description: 'Filter by library type',
+              default: 'all',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+        },
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_get_library',
+        description: 'Get details about a specific library including metadata and list of documents.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id'],
+        },
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_create_library',
+        description: 'Create a new library with optional initial documents.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Library name (1-255 characters)',
+            },
+            description: {
+              type: 'string',
+              description: 'Library description (optional)',
+            },
+            public: {
+              type: 'boolean',
+              description: 'Whether library is public',
+              default: false,
+            },
+            bibcodes: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Initial bibcodes to add (optional)',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['name'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_delete_library',
+        description: 'Delete a library permanently.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_edit_library',
+        description: 'Edit library metadata (name, description, public status).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            name: {
+              type: 'string',
+              description: 'New library name (optional)',
+            },
+            description: {
+              type: 'string',
+              description: 'New library description (optional)',
+            },
+            public: {
+              type: 'boolean',
+              description: 'Whether library is public (optional)',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_manage_documents',
+        description: 'Add or remove documents from a library.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            bibcodes: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'List of bibcodes (1-2000)',
+            },
+            action: {
+              type: 'string',
+              enum: ['add', 'remove'],
+              description: 'Action to perform',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'bibcodes', 'action'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_add_documents_by_query',
+        description: 'Add documents to a library from an ADS search query.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            query: {
+              type: 'string',
+              description: 'ADS search query',
+            },
+            rows: {
+              type: 'number',
+              description: 'Number of results to add (1-2000, default 25)',
+              default: 25,
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'query'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_library_operation',
+        description: 'Perform set operations on libraries (union, intersection, difference, copy, empty).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Target library identifier',
+            },
+            operation: {
+              type: 'string',
+              enum: ['union', 'intersection', 'difference', 'copy', 'empty'],
+              description: 'Operation to perform',
+            },
+            source_library_ids: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Source library IDs for set operations (optional)',
+            },
+            name: {
+              type: 'string',
+              description: 'Name for new library (for copy operation, optional)',
+            },
+            description: {
+              type: 'string',
+              description: 'Description for new library (for copy operation, optional)',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'operation'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_get_permissions',
+        description: 'Get permission information for a library.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id'],
+        },
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_update_permissions',
+        description: 'Grant or modify permissions for a user on a library.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            email: {
+              type: 'string',
+              description: 'User email',
+            },
+            permission: {
+              type: 'string',
+              enum: ['owner', 'admin', 'write', 'read'],
+              description: 'Permission level to grant',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'email', 'permission'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_transfer_library',
+        description: 'Transfer ownership of a library to another user.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            email: {
+              type: 'string',
+              description: 'Email of new owner',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'email'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_get_annotation',
+        description: 'Get annotation/note for a document in a library.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            bibcode: {
+              type: 'string',
+              description: 'Bibcode to get annotation for',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'bibcode'],
+        },
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_manage_annotation',
+        description: 'Add or update an annotation/note for a document in a library.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            bibcode: {
+              type: 'string',
+              description: 'Bibcode to annotate',
+            },
+            content: {
+              type: 'string',
+              description: 'Annotation content (1-10000 characters)',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'bibcode', 'content'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'ads_delete_annotation',
+        description: 'Delete an annotation/note for a document in a library.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            library_id: {
+              type: 'string',
+              description: 'Library identifier',
+            },
+            bibcode: {
+              type: 'string',
+              description: 'Bibcode to remove annotation from',
+            },
+            response_format: {
+              type: 'string',
+              enum: ['markdown', 'json'],
+              default: 'markdown',
+            },
+          },
+          required: ['library_id', 'bibcode'],
+        },
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
     ],
   };
 });
@@ -268,6 +741,118 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'ads_export': {
         const input = ExportInputSchema.parse(args);
         const result = await exportCitations(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_get_libraries': {
+        const input = GetLibrariesInputSchema.parse(args);
+        const result = await getLibraries(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_get_library': {
+        const input = GetLibraryInputSchema.parse(args);
+        const result = await getLibrary(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_create_library': {
+        const input = CreateLibraryInputSchema.parse(args);
+        const result = await createLibrary(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_delete_library': {
+        const input = DeleteLibraryInputSchema.parse(args);
+        const result = await deleteLibrary(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_edit_library': {
+        const input = EditLibraryInputSchema.parse(args);
+        const result = await editLibrary(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_manage_documents': {
+        const input = ManageDocumentsInputSchema.parse(args);
+        const result = await manageDocuments(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_add_documents_by_query': {
+        const input = AddDocumentsByQueryInputSchema.parse(args);
+        const result = await addDocumentsByQuery(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_library_operation': {
+        const input = LibraryOperationInputSchema.parse(args);
+        const result = await libraryOperation(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_get_permissions': {
+        const input = GetPermissionsInputSchema.parse(args);
+        const result = await getPermissions(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_update_permissions': {
+        const input = UpdatePermissionsInputSchema.parse(args);
+        const result = await updatePermissions(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_transfer_library': {
+        const input = TransferLibraryInputSchema.parse(args);
+        const result = await transferLibrary(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_get_annotation': {
+        const input = GetAnnotationInputSchema.parse(args);
+        const result = await getAnnotation(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_manage_annotation': {
+        const input = ManageAnnotationInputSchema.parse(args);
+        const result = await manageAnnotation(client, input);
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'ads_delete_annotation': {
+        const input = DeleteAnnotationInputSchema.parse(args);
+        const result = await deleteAnnotation(client, input);
         return {
           content: [{ type: 'text', text: result }],
         };

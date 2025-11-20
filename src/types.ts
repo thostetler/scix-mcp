@@ -47,3 +47,150 @@ export type GetPaperInput = z.infer<typeof GetPaperInputSchema>;
 export type MetricsInput = z.infer<typeof MetricsInputSchema>;
 export type CitationsInput = z.infer<typeof CitationsInputSchema>;
 export type ExportInput = z.infer<typeof ExportInputSchema>;
+
+// Library Management Types
+export enum LibraryPermission {
+  OWNER = 'owner',
+  ADMIN = 'admin',
+  WRITE = 'write',
+  READ = 'read'
+}
+
+export enum LibraryType {
+  ALL = 'all',
+  OWNER = 'owner',
+  COLLABORATOR = 'collaborator'
+}
+
+export enum LibraryOperation {
+  UNION = 'union',
+  INTERSECTION = 'intersection',
+  DIFFERENCE = 'difference',
+  COPY = 'copy',
+  EMPTY = 'empty'
+}
+
+export enum DocumentAction {
+  ADD = 'add',
+  REMOVE = 'remove'
+}
+
+// Get Libraries
+export const GetLibrariesInputSchema = z.object({
+  type: z.nativeEnum(LibraryType).default(LibraryType.ALL).describe('Filter by library type'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Get Library
+export const GetLibraryInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Create Library
+export const CreateLibraryInputSchema = z.object({
+  name: z.string().min(1).max(255).describe('Library name'),
+  description: z.string().max(1000).optional().describe('Library description'),
+  public: z.boolean().default(false).describe('Whether library is public'),
+  bibcodes: z.array(z.string()).optional().describe('Initial bibcodes to add'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Delete Library
+export const DeleteLibraryInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Edit Library Metadata
+export const EditLibraryInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  name: z.string().min(1).max(255).optional().describe('New library name'),
+  description: z.string().max(1000).optional().describe('New library description'),
+  public: z.boolean().optional().describe('Whether library is public'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Add/Remove Documents
+export const ManageDocumentsInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  bibcodes: z.array(z.string()).min(1).max(2000).describe('List of bibcodes'),
+  action: z.nativeEnum(DocumentAction).describe('Action to perform (add or remove)'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Add Documents by Query
+export const AddDocumentsByQueryInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  query: z.string().min(1).describe('ADS search query'),
+  rows: z.number().int().min(1).max(2000).default(25).describe('Number of results to add'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Library Operation
+export const LibraryOperationInputSchema = z.object({
+  library_id: z.string().min(1).describe('Target library identifier'),
+  operation: z.nativeEnum(LibraryOperation).describe('Operation to perform'),
+  source_library_ids: z.array(z.string()).optional().describe('Source library IDs for union/intersection/difference'),
+  name: z.string().optional().describe('Name for new library (for copy operation)'),
+  description: z.string().optional().describe('Description for new library (for copy operation)'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Get Permissions
+export const GetPermissionsInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Update Permissions
+export const UpdatePermissionsInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  email: z.string().email().describe('User email to grant/modify permissions'),
+  permission: z.nativeEnum(LibraryPermission).describe('Permission level to grant'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Transfer Library
+export const TransferLibraryInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  email: z.string().email().describe('Email of new owner'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Get Annotation
+export const GetAnnotationInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  bibcode: z.string().min(1).describe('Bibcode to get annotation for'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Add/Update Annotation
+export const ManageAnnotationInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  bibcode: z.string().min(1).describe('Bibcode to annotate'),
+  content: z.string().min(1).max(10000).describe('Annotation content'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+// Delete Annotation
+export const DeleteAnnotationInputSchema = z.object({
+  library_id: z.string().min(1).describe('Library identifier'),
+  bibcode: z.string().min(1).describe('Bibcode to remove annotation from'),
+  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+export type GetLibrariesInput = z.infer<typeof GetLibrariesInputSchema>;
+export type GetLibraryInput = z.infer<typeof GetLibraryInputSchema>;
+export type CreateLibraryInput = z.infer<typeof CreateLibraryInputSchema>;
+export type DeleteLibraryInput = z.infer<typeof DeleteLibraryInputSchema>;
+export type EditLibraryInput = z.infer<typeof EditLibraryInputSchema>;
+export type ManageDocumentsInput = z.infer<typeof ManageDocumentsInputSchema>;
+export type AddDocumentsByQueryInput = z.infer<typeof AddDocumentsByQueryInputSchema>;
+export type LibraryOperationInput = z.infer<typeof LibraryOperationInputSchema>;
+export type GetPermissionsInput = z.infer<typeof GetPermissionsInputSchema>;
+export type UpdatePermissionsInput = z.infer<typeof UpdatePermissionsInputSchema>;
+export type TransferLibraryInput = z.infer<typeof TransferLibraryInputSchema>;
+export type GetAnnotationInput = z.infer<typeof GetAnnotationInputSchema>;
+export type ManageAnnotationInput = z.infer<typeof ManageAnnotationInputSchema>;
+export type DeleteAnnotationInput = z.infer<typeof DeleteAnnotationInputSchema>;

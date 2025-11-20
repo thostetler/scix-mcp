@@ -108,4 +108,91 @@ export class ADSAPIClient {
       throw error;
     }
   }
+
+  async put(endpoint: string, data: any): Promise<any> {
+    const url = `${this.baseURL}/${endpoint}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Check ADS_DEV_KEY environment variable.');
+      }
+
+      if (response.status === 404) {
+        throw new Error('Resource not found.');
+      }
+
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded (5000 requests/day).');
+      }
+
+      if (!response.ok) {
+        throw new Error(`ADS API error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout after 30 seconds');
+      }
+      throw error;
+    }
+  }
+
+  async delete(endpoint: string): Promise<any> {
+    const url = `${this.baseURL}/${endpoint}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Check ADS_DEV_KEY environment variable.');
+      }
+
+      if (response.status === 404) {
+        throw new Error('Resource not found.');
+      }
+
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded (5000 requests/day).');
+      }
+
+      if (!response.ok) {
+        throw new Error(`ADS API error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout after 30 seconds');
+      }
+      throw error;
+    }
+  }
 }
