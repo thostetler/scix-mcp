@@ -46,7 +46,7 @@ Add to your MCP client configuration (e.g., Claude Desktop `config.json`):
   "mcpServers": {
     "ads": {
       "command": "npx",
-      "args": ["scix-mcp-server"],
+      "args": ["scix-mcp"],
       "env": {
         "SCIX_API_TOKEN": "your_api_key_here"
       }

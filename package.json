@@ -1,10 +1,10 @@
 {
-  "name": "scix-mcp-server",
+  "name": "scix-mcp",
   "version": "1.0.0",
   "description": "MCP server for NASA Astrophysics Data System API",
   "type": "module",
   "bin": {
-    "scix-mcp-server": "./build/index.js"
+    "scix-mcp": "./build/index.js"
   },
   "files": [
     "build",
@@ -30,12 +30,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/thostetler/scix-mcp-server.git"
+    "url": "https://github.com/thostetler/scix-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/thostetler/scix-mcp-server/issues"
+    "url": "https://github.com/thostetler/scix-mcp/issues"
   },
-  "homepage": "https://github.com/thostetler/scix-mcp-server#readme",
+  "homepage": "https://github.com/thostetler/scix-mcp#readme",
   "engines": {
     "node": ">=18.0.0"
   },

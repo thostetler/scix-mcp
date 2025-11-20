@@ -52,7 +52,7 @@ import {
 
 const server = new Server(
   {
-    name: 'ads-mcp-server',
+    name: 'scix-mcp',
     version: '1.0.0',
   },
   {
