@@ -166,6 +166,73 @@ npm run build
 npx @modelcontextprotocol/inspector node build/index.js
 ```
 
+## Testing
+
+The project includes a comprehensive test suite using Vitest.
+
+### Running Tests
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Run tests with coverage
+pnpm test:coverage
+```
+
+### Test Structure
+
+Tests are organized in the `test/` directory:
+
+```
+test/
+├── helpers/
+│   └── mockFetch.ts        # Fetch mocking utilities
+├── client.test.ts           # HTTP client tests
+└── tools/
+    ├── search.test.ts       # Search tool tests
+    ├── paper.test.ts        # Paper details tests
+    ├── metrics.test.ts      # Metrics tests
+    ├── citations.test.ts    # Citations/references tests
+    ├── export.test.ts       # Export tests
+    └── library.test.ts      # Library management tests
+```
+
+### Test Coverage
+
+The test suite covers:
+
+- **HTTP Client**: GET/POST/PUT/DELETE methods, error handling (401/404/429), timeouts, request formatting
+- **Search Tools**: Query parameter encoding, pagination, result limiting, response formatting
+- **Paper Tools**: Bibcode validation, field selection, error handling for missing papers
+- **Metrics Tools**: Batch bibcode processing, MAX_BIBCODES limits, metric type selection
+- **Citation Tools**: Forward/backward citations, sorting, row limits
+- **Export Tools**: Multiple export formats (BibTeX, AASTeX, EndNote, etc.), batch processing
+- **Library Tools**: All CRUD operations, permissions, annotations, library operations
+
+### API Token for Tests
+
+Tests use mock fetch and don't require a real API token. The test suite sets `ADS_DEV_KEY=test-api-key` automatically.
+
+### Live Integration Tests (Optional)
+
+To run tests against the real ADS API (skipped by default):
+
+1. Set your real API key:
+   ```bash
+   export ADS_DEV_KEY=your_real_api_key
+   ```
+
+2. Run integration tests (not implemented yet):
+   ```bash
+   pnpm test:integration
+   ```
+
+**Note**: Integration tests count against your daily rate limit (5000 requests/day).
+
 ## Project Structure
 
 ```
