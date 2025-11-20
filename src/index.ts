@@ -5,7 +5,12 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SciXAPIClient } from './client.js';
 import { search } from './tools/search.js';
 import { getPaper } from './tools/paper.js';
@@ -49,6 +54,11 @@ import {
   ManageAnnotationInputSchema,
   DeleteAnnotationInputSchema
 } from './types.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const aiUsageGuidePath = path.join(__dirname, '..', 'AI_USAGE_GUIDE.md');
+const aiUsageGuideUri = 'resource:ai-usage-guide';
 
 const server = new Server(
   {
@@ -688,6 +698,39 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           idempotentHint: false,
           openWorldHint: true,
         },
+      },
+    ],
+  };
+});
+
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  return {
+    resources: [
+      {
+        uri: aiUsageGuideUri,
+        name: 'AI Usage Guide',
+        description: 'Prompt with tool usage tips and workflows for the SciX MCP server.',
+        mimeType: 'text/markdown',
+      },
+    ],
+  };
+});
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const { uri } = request.params;
+
+  if (uri !== aiUsageGuideUri) {
+    throw new Error(`Unknown resource: ${uri}`);
+  }
+
+  const content = await readFile(aiUsageGuidePath, 'utf-8');
+
+  return {
+    contents: [
+      {
+        uri,
+        mimeType: 'text/markdown',
+        text: content,
       },
     ],
   };
