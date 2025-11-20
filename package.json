@@ -6,10 +6,38 @@
   "bin": {
     "ads-mcp-server": "./build/index.js"
   },
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "nasa",
+    "ads",
+    "astrophysics",
+    "astronomy",
+    "research",
+    "papers"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/scix-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/scix-mcp/issues"
+  },
+  "homepage": "https://github.com/yourusername/scix-mcp#readme",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.0",
