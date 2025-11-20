@@ -26,16 +26,16 @@
     "research",
     "papers"
   ],
-  "author": "Your Name <your.email@example.com>",
+  "author": "Tim Hostetler",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/scix-mcp.git"
+    "url": "https://github.com/thostetler/scix-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/scix-mcp/issues"
+    "url": "https://github.com/thostetler/scix-mcp-server/issues"
   },
-  "homepage": "https://github.com/yourusername/scix-mcp#readme",
+  "homepage": "https://github.com/thostetler/scix-mcp-server#readme",
   "engines": {
     "node": ">=18.0.0"
   },
