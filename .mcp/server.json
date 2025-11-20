@@ -1,0 +1,10 @@
+{
+  "name": "scix-mcp",
+  "description": "NASA SciX MCP server for ADS search, metrics, and library management",
+  "command": "npx",
+  "args": ["scix-mcp"],
+  "env": {
+    "SCIX_API_TOKEN": "<your_scix_token>"
+  },
+  "transport": "stdio"
+}

@@ -55,6 +55,8 @@ Add to your MCP client configuration (e.g., Claude Desktop `config.json`):
 }
 ```
 
+Local MCP clients that read `.mcp/server.json` can also pick up the packaged config in `.mcp/server.json`; just drop in your `SCIX_API_TOKEN`.
+
 ## Available Tools
 
 ### search
