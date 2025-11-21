@@ -59,77 +59,44 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 
 ## Available Tools
 
-### search
+### Search & Metadata
 
-Search the SciX database with full Solr query syntax.
+- `search`: Solr-powered search across SciX. Params: `query` (required), `rows` (1-100, default 10), `start` (offset, default 0), `sort` (`score desc` | `citation_count desc` | `date desc` | `date asc` | `read_count desc`, default `score desc`), `response_format` (`markdown` | `json`, default `markdown`).
+  - Example queries: `author:"Einstein, A." title:relativity`, `black holes year:2020-2023`, `author:^Smith`, `dark energy AND galaxy clusters`.
+- `get_paper`: Fetch a paper by `bibcode` with optional `response_format`.
+- `get_metrics`: Metrics for `bibcodes` (1-2000) with optional `response_format`; returns h-index, g-index, citation counts, usage stats.
 
-**Parameters:**
+### Citation Network
 
-- `query` (string, required): Search query
-- `rows` (number, optional): Results to return (1-100, default 10)
-- `start` (number, optional): Pagination offset (default 0)
-- `sort` (string, optional): Sort order (default "score desc")
-- `response_format` (string, optional): "markdown" or "json" (default "markdown")
+- `get_citations`: Forward citations for `bibcode`; optional `rows` (1-100, default 20) and `response_format`.
+- `get_references`: Backward references for `bibcode`; optional `rows` (1-100, default 20) and `response_format`.
 
-**Example queries:**
+### Export
 
-```
-author:"Einstein, A." title:relativity
-black holes year:2020-2023
-author:^Smith (first author only)
-dark energy AND galaxy clusters
-```
+- `export`: Export `bibcodes` (1-2000) in `format` (`bibtex` | `aastex` | `endnote` | `medlars`). Returns plain text in the chosen format.
 
-### get_paper
+### Libraries
 
-Get detailed information about a specific paper.
+- `get_libraries`: List libraries; optional `type` (`all` | `owner` | `collaborator`, default `all`) and `response_format`.
+- `get_library`: Metadata + documents for `library_id`; optional `response_format`.
+- `create_library`: Create with `name` (required), optional `description`, `public` (default `false`), `bibcodes`, and `response_format`.
+- `delete_library`: Permanently delete by `library_id`; optional `response_format`.
+- `edit_library`: Update `name`, `description`, or `public` for `library_id`; optional `response_format`.
+- `manage_documents`: Add/remove documents with `library_id`, `bibcodes` (1-2000), `action` (`add` | `remove`), and optional `response_format`.
+- `add_documents_by_query`: Add search results to a library with `library_id`, `query`, optional `rows` (1-2000, default 25), and `response_format`.
+- `library_operation`: Run set ops on a library with `library_id`, `operation` (`union` | `intersection` | `difference` | `copy` | `empty`), optional `source_library_ids`, `name`/`description` (for copy), and `response_format`.
 
-**Parameters:**
+### Permissions & Sharing
 
-- `bibcode` (string, required): SciX bibcode (e.g., "2019ApJ...886..145M")
-- `response_format` (string, optional): "markdown" or "json"
+- `get_permissions`: View owners/collaborators for `library_id`; optional `response_format`.
+- `update_permissions`: Grant/change a user's access with `library_id`, `email`, `permission` (`owner` | `admin` | `write` | `read`), and optional `response_format`.
+- `transfer_library`: Transfer ownership with `library_id`, `email`, and optional `response_format`.
 
-### get_metrics
+### Annotations
 
-Calculate citation metrics for a set of papers.
-
-**Parameters:**
-
-- `bibcodes` (array, required): List of bibcodes (1-2000)
-- `response_format` (string, optional): "markdown" or "json"
-
-**Returns:** h-index, g-index, total citations, paper counts, usage statistics
-
-### get_citations
-
-Get papers that cite a given paper (forward citations).
-
-**Parameters:**
-
-- `bibcode` (string, required): SciX bibcode
-- `rows` (number, optional): Number of citations (1-100, default 20)
-- `response_format` (string, optional): "markdown" or "json"
-
-### get_references
-
-Get papers referenced by a given paper (backward citations).
-
-**Parameters:**
-
-- `bibcode` (string, required): SciX bibcode
-- `rows` (number, optional): Number of references (1-100, default 20)
-- `response_format` (string, optional): "markdown" or "json"
-
-### export
-
-Export citations in various formats.
-
-**Parameters:**
-
-- `bibcodes` (array, required): List of bibcodes (1-2000)
-- `format` (string, required): "bibtex", "aastex", "endnote", or "medlars"
-
-**Returns:** Formatted citation export as plain text
+- `get_annotation`: Fetch note content for `library_id` + `bibcode`; optional `response_format`.
+- `manage_annotation`: Add/update note with `library_id`, `bibcode`, `content`, and optional `response_format`.
+- `delete_annotation`: Remove note for `library_id` + `bibcode`; optional `response_format`.
 
 ## Rate Limits
 
