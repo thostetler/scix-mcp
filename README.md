@@ -2,23 +2,7 @@
 
 A Model Context Protocol (MCP) server for the NASA Astrophysics Data System (SciX) API. This server enables LLMs to search astronomical literature, retrieve paper metadata, analyze citation metrics, and export bibliographic data.
 
-## Features
-
-- **Literature Search**: Full-text search with advanced Solr query syntax
-- **Paper Details**: Retrieve comprehensive metadata for any publication
-- **Citation Metrics**: Calculate h-index, citation counts, and usage statistics
-- **Citation Network**: Explore forward and backward citations
-- **Export**: Generate citations in BibTeX, AASTeX, EndNote, and MEDLARS formats
-- **Dual Format**: Support for both human-readable Markdown and machine-readable JSON
-
-## Installation
-
-```bash
-npm install
-npm run build
-```
-
-## Configuration
+## Quick Start (MCP clients)
 
 ### Get an API Key
 
@@ -37,9 +21,9 @@ cp .env.example .env
 # Edit .env and add your key
 ```
 
-### Add to MCP Client
+### Configure your MCP client (Claude, Codex, etc.)
 
-Add to your MCP client configuration (e.g., Claude Desktop `config.json`):
+Add to your MCP client configuration:
 
 ```json
 {
@@ -55,7 +39,29 @@ Add to your MCP client configuration (e.g., Claude Desktop `config.json`):
 }
 ```
 
+Common locations: Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or `%AppData%\\Claude\\claude_desktop_config.json` on Windows) and Codex CLI (`~/.config/codex/config.json`). Restart your client after editing.
+
 Local MCP clients that read `.mcp/server.json` can also pick up the packaged config in `.mcp/server.json`; just drop in your `SCIX_API_TOKEN`.
+
+## Example Prompts
+
+```text
+- Find refereed JWST exoplanet papers from 2022-2024 sorted by citation_count, return the top 5 in markdown with bibcodes, titles, first author, and citation counts.
+- Build a query for gravitational wave kilonova follow-ups since 2017 (fielded abstract search), add the first 50 results to library <library_id>, and then give me metrics (h-index, total cites) for those bibcodes in JSON.
+- Fetch paper 2020ApJ...905....3A, list its first 10 references with titles, and also list the first 10 forward citations with publication years.
+- Create a public library named “Cosmic Web Reviews”, seeded with bibcodes [...], then share the public URL and export the contents in BibTeX.
+- For bibcodes [...], return citation metrics plus a ranked list of which papers cite the most recent one (rows=25) in markdown.
+- Get all my libraries, pick the one with the most documents, and return its metadata plus the first 5 document titles in JSON.
+```
+
+## Features
+
+- **Literature Search**: Full-text search with advanced Solr query syntax
+- **Paper Details**: Retrieve comprehensive metadata for any publication
+- **Citation Metrics**: Calculate h-index, citation counts, and usage statistics
+- **Citation Network**: Explore forward and backward citations
+- **Export**: Generate citations in BibTeX, AASTeX, EndNote, and MEDLARS formats
+- **Dual Format**: Support for both human-readable Markdown and machine-readable JSON
 
 ## Available Tools
 
@@ -122,12 +128,18 @@ The SciX search supports powerful query syntax:
 
 ## Development
 
+### Install & Build
+
+```bash
+npm install
+npm run build
+```
+
+### Local commands
+
 ```bash
 # Watch mode
 npm run dev
-
-# Build
-npm run build
 
 # Test with MCP Inspector
 npx @modelcontextprotocol/inspector node build/index.js
