@@ -1,6 +1,6 @@
 # NASA SciX MCP Server
 
-A production-grade Model Context Protocol (MCP) server for the NASA Astrophysics Data System (SciX) API. This server enables LLMs to search astronomical literature, retrieve paper metadata, analyze citation metrics, and export bibliographic data.
+A Model Context Protocol (MCP) server for the NASA Astrophysics Data System (SciX) API. This server enables LLMs to search astronomical literature, retrieve paper metadata, analyze citation metrics, and export bibliographic data.
 
 ## Features
 
