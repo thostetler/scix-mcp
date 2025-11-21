@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ADSAPIClient } from '../src/client.js';
+import { SciXAPIClient } from '../src/client.js';
 import { setupMockFetch, createTimeoutFetch, restoreFetch } from './helpers/mockFetch.js';
 
-describe('ADSAPIClient', () => {
-  let client: ADSAPIClient;
-  const originalEnv = process.env.ADS_DEV_KEY;
+describe('SciXAPIClient', () => {
+  let client: SciXAPIClient;
+  const originalEnv = process.env.SCIX_API_TOKEN;
 
   beforeEach(() => {
-    process.env.ADS_DEV_KEY = 'test-api-key';
-    client = new ADSAPIClient();
+    process.env.SCIX_API_TOKEN = 'test-api-key';
+    client = new SciXAPIClient();
   });
 
   afterEach(() => {
     restoreFetch();
-    process.env.ADS_DEV_KEY = originalEnv;
+    process.env.SCIX_API_TOKEN = originalEnv;
   });
 
   describe('GET requests', () => {
@@ -78,7 +78,7 @@ describe('ADSAPIClient', () => {
       setupMockFetch({ status: 401, statusText: 'Unauthorized' });
 
       await expect(client.get('test')).rejects.toThrow('Authentication failed');
-      await expect(client.get('test')).rejects.toThrow('ADS_DEV_KEY');
+      await expect(client.get('test')).rejects.toThrow('SCIX_API_TOKEN');
     });
 
     it('should throw on 404 Not Found', async () => {
@@ -97,7 +97,7 @@ describe('ADSAPIClient', () => {
     it('should throw on generic HTTP errors', async () => {
       setupMockFetch({ status: 500, statusText: 'Internal Server Error' });
 
-      await expect(client.get('test')).rejects.toThrow('ADS API error: 500');
+      await expect(client.get('test')).rejects.toThrow('SciX API error: 500');
     });
 
     it('should handle request timeout', async () => {
@@ -250,7 +250,7 @@ describe('ADSAPIClient', () => {
 
   describe('Authentication', () => {
     it('should use API key from environment', () => {
-      const client = new ADSAPIClient();
+      const client = new SciXAPIClient();
       expect(client).toBeDefined();
     });
 

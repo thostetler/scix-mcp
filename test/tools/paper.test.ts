@@ -1,21 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ADSAPIClient } from '../../src/client.js';
+import { SciXAPIClient } from '../../src/client.js';
 import { setupMockFetch, restoreFetch } from '../helpers/mockFetch.js';
 import { getPaper } from '../../src/tools/paper.js';
 import { ResponseFormat } from '../../src/types.js';
 
 describe('Paper Tool', () => {
-  let client: ADSAPIClient;
-  const originalEnv = process.env.ADS_DEV_KEY;
+  let client: SciXAPIClient;
+  const originalEnv = process.env.SCIX_API_TOKEN;
 
   beforeEach(() => {
-    process.env.ADS_DEV_KEY = 'test-api-key';
-    client = new ADSAPIClient();
+    process.env.SCIX_API_TOKEN = 'test-api-key';
+    client = new SciXAPIClient();
   });
 
   afterEach(() => {
     restoreFetch();
-    process.env.ADS_DEV_KEY = originalEnv;
+    process.env.SCIX_API_TOKEN = originalEnv;
   });
 
   describe('getPaper', () => {

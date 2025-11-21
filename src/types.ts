@@ -39,7 +39,40 @@ export const CitationsInputSchema = z.object({
 
 export const ExportInputSchema = z.object({
   bibcodes: z.array(z.string()).min(1).max(2000).describe('List of bibcodes to export'),
-  format: z.enum(['bibtex', 'aastex', 'endnote', 'medlars']).describe('Export format')
+  format: z.enum([
+    'aastex',
+    'ads',
+    'agu',
+    'ams',
+    'bibtex',
+    'bibtexabs',
+    'custom',
+    'dcxml',
+    'endnote',
+    'gsa',
+    'icarus',
+    'ieee',
+    'jatsxml',
+    'medlars',
+    'mnras',
+    'procite',
+    'refabsxml',
+    'refworks',
+    'refxml',
+    'ris',
+    'rss',
+    'soph',
+    'votable'
+  ]).describe('Export format'),
+  custom_format: z.string().optional().describe('Custom format string (required when format is custom)'),
+  sort: z.union([z.string(), z.array(z.string())]).optional().describe('Optional sort order (e.g., "date desc")'),
+  maxauthor: z.union([z.number().int(), z.array(z.number().int())]).optional().describe('Maximum authors to show before et al.'),
+  authorcutoff: z.union([z.number().int(), z.array(z.number().int())]).optional().describe('Author cutoff threshold'),
+  journalformat: z.union([z.number().int(), z.array(z.number().int())]).optional().describe('Journal format style code'),
+  keyformat: z.union([z.string(), z.array(z.string())]).optional().describe('Citation key format')
+}).refine((data) => (data.format === 'custom' ? Boolean(data.custom_format) : true), {
+  message: 'custom_format is required when format is custom',
+  path: ['custom_format']
 });
 
 export type SearchInput = z.infer<typeof SearchInputSchema>;

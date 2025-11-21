@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ADSAPIClient } from '../../src/client.js';
+import { SciXAPIClient } from '../../src/client.js';
 import { setupMockFetch, restoreFetch } from '../helpers/mockFetch.js';
 import {
   getLibraries,
@@ -20,17 +20,17 @@ import {
 import { ResponseFormat, DocumentAction, LibraryOperation } from '../../src/types.js';
 
 describe('Library Tools', () => {
-  let client: ADSAPIClient;
-  const originalEnv = process.env.ADS_DEV_KEY;
+  let client: SciXAPIClient;
+  const originalEnv = process.env.SCIX_API_TOKEN;
 
   beforeEach(() => {
-    process.env.ADS_DEV_KEY = 'test-api-key';
-    client = new ADSAPIClient();
+    process.env.SCIX_API_TOKEN = 'test-api-key';
+    client = new SciXAPIClient();
   });
 
   afterEach(() => {
     restoreFetch();
-    process.env.ADS_DEV_KEY = originalEnv;
+    process.env.SCIX_API_TOKEN = originalEnv;
   });
 
   describe('getLibraries', () => {
@@ -213,7 +213,7 @@ describe('Library Tools', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toContain('biblib/libraries/lib1');
+      expect(url).toContain('biblib/documents/lib1');
       expect(init.method).toBe('DELETE');
       expect(result).toContain('deleted successfully');
     });
@@ -256,7 +256,7 @@ describe('Library Tools', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toContain('biblib/libraries/lib1');
+      expect(url).toContain('biblib/documents/lib1');
       expect(init.method).toBe('PUT');
 
       const body = JSON.parse(init.body);
@@ -302,11 +302,11 @@ describe('Library Tools', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toContain('biblib/libraries/lib1');
+      expect(url).toContain('biblib/documents/lib1');
       expect(init.method).toBe('POST');
 
       const body = JSON.parse(init.body);
-      expect(body.bibcodes).toEqual(['bib1', 'bib2', 'bib3']);
+      expect(body.bibcode).toEqual(['bib1', 'bib2', 'bib3']);
       expect(body.action).toBe('add');
 
       expect(result).toContain('3 documents added to library');
@@ -341,7 +341,7 @@ describe('Library Tools', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toContain('biblib/libraries/lib1/query');
+      expect(url).toContain('biblib/documents/lib1/query');
 
       const body = JSON.parse(init.body);
       expect(body.query).toBe('author:"Einstein"');

@@ -1,21 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ADSAPIClient } from '../../src/client.js';
+import { SciXAPIClient } from '../../src/client.js';
 import { setupMockFetch, restoreFetch } from '../helpers/mockFetch.js';
 import { exportCitations } from '../../src/tools/export.js';
 import { MAX_BIBCODES } from '../../src/config.js';
 
 describe('Export Tool', () => {
-  let client: ADSAPIClient;
-  const originalEnv = process.env.ADS_DEV_KEY;
+  let client: SciXAPIClient;
+  const originalEnv = process.env.SCIX_API_TOKEN;
 
   beforeEach(() => {
-    process.env.ADS_DEV_KEY = 'test-api-key';
-    client = new ADSAPIClient();
+    process.env.SCIX_API_TOKEN = 'test-api-key';
+    client = new SciXAPIClient();
   });
 
   afterEach(() => {
     restoreFetch();
-    process.env.ADS_DEV_KEY = originalEnv;
+    process.env.SCIX_API_TOKEN = originalEnv;
   });
 
   describe('exportCitations', () => {
@@ -70,6 +70,43 @@ describe('Export Tool', () => {
       expect(url).toContain('export/endnote');
     });
 
+    it('should forward optional export parameters', async () => {
+      const mockFetch = setupMockFetch({ body: { export: 'opts' } });
+
+      await exportCitations(client, {
+        bibcodes: ['2024ApJ...123..456A'],
+        format: 'bibtex',
+        sort: 'date desc',
+        maxauthor: 2,
+        authorcutoff: 2,
+        journalformat: 3,
+        keyformat: 'short'
+      });
+
+      const [, init] = mockFetch.mock.calls[0];
+      const body = JSON.parse(init.body);
+      expect(body.sort).toEqual(['date desc']);
+      expect(body.maxauthor).toEqual([2]);
+      expect(body.authorcutoff).toEqual([2]);
+      expect(body.journalformat).toEqual([3]);
+      expect(body.keyformat).toEqual(['short']);
+    });
+
+    it('should post custom format payload when format is custom', async () => {
+      const mockFetch = setupMockFetch({ body: { export: 'custom' } });
+
+      await exportCitations(client, {
+        bibcodes: ['test'],
+        format: 'custom',
+        custom_format: 'my-format'
+      });
+
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(url).toContain('export/custom');
+      const body = JSON.parse(init.body);
+      expect(body.format).toBe('my-format');
+    });
+
     it('should handle multiple bibcodes', async () => {
       const mockResponse = { export: 'multiple citations...' };
       const mockFetch = setupMockFetch({ body: mockResponse });
@@ -110,7 +147,7 @@ describe('Export Tool', () => {
     });
 
     it('should support different export formats', async () => {
-      const formats = ['bibtex', 'aastex', 'endnote', 'ris'];
+      const formats = ['bibtex', 'aastex', 'endnote', 'medlars', 'ris', 'ads', 'soph'];
 
       for (const format of formats) {
         const mockFetch = setupMockFetch({ body: { export: 'test' } });

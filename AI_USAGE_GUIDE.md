@@ -168,6 +168,8 @@ citations(bibcode:X)      # Papers citing X
 2. **Use field-specific searches**: `author:"Smith, J."` not `"J. Smith author"`
 3. **Combine operators strategically**: `(dark energy OR dark matter) AND year:2020-2023`
 4. **Check numFound**: Adjust query if results too many/few
+5. **Scale with cursormark**: For large result sets, use Solr `cursormark` pagination (`cursormark=*`, stable `sort`, loop until `nextCursorMark` repeats) instead of `start` offsets
+6. **Batch many queries**: If you already have a text file full of queries, run them through the ADS BigQuery endpoint to avoid thousands of individual `search` calls
 
 ### Efficient Workflows
 
