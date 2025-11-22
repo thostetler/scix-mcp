@@ -235,7 +235,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'export',
-        description: 'Export citations in various formats (BibTeX, AASTeX, EndNote, MEDLARS).',
+        description: 'Export citations in 25+ academic formats (BibTeX, AASTeX, EndNote, IEEE, MNRAS, etc.) with support for custom formatting templates.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -246,8 +246,56 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             format: {
               type: 'string',
-              enum: ['bibtex', 'aastex', 'endnote', 'medlars'],
+              enum: [
+                'aastex',
+                'ads',
+                'agu',
+                'ams',
+                'bibtex',
+                'bibtexabs',
+                'custom',
+                'dcxml',
+                'endnote',
+                'gsa',
+                'icarus',
+                'ieee',
+                'jatsxml',
+                'medlars',
+                'mnras',
+                'procite',
+                'refabsxml',
+                'refworks',
+                'refxml',
+                'ris',
+                'rss',
+                'soph',
+                'votable'
+              ],
               description: 'Export format',
+            },
+            custom_format: {
+              type: 'string',
+              description: 'Custom format string using field specifiers (required when format is custom)',
+            },
+            sort: {
+              type: 'string',
+              description: 'Sort order for bibcodes (e.g., "date desc", "first_author asc")',
+            },
+            maxauthor: {
+              type: 'number',
+              description: 'Maximum number of authors to display (default: 200)',
+            },
+            authorcutoff: {
+              type: 'number',
+              description: 'Number of authors before using "et al."',
+            },
+            journalformat: {
+              type: 'number',
+              description: 'Journal name format: 1 (AASTeX macros), 2 (abbreviations), 3 (full names)',
+            },
+            keyformat: {
+              type: 'string',
+              description: 'BibTeX key format template (e.g., "%1H%Y" for FirstAuthorYear)',
             },
           },
           required: ['bibcodes', 'format'],
@@ -1337,14 +1385,41 @@ Highly cited papers with many forward citations = foundational work
 
 ## Export Tool Overview
 
-The \`export\` tool generates formatted citations from bibcodes in various academic formats.
+The \`export\` tool generates formatted citations from bibcodes in various academic formats, with support for custom formatting templates.
 
-## Supported Formats
+## Discovering Available Formats
 
+**Use the /manifest endpoint** to get a complete list of available export formats:
+- The manifest returns all supported formats with metadata
+- Formats include type (text, XML, HTML, LaTeX, tagged, custom)
+- Each format has a route, extension, and name
+
+## All Available Export Formats
+
+**Standard Formats (25+ options):**
 - \`bibtex\` - BibTeX format for LaTeX
+- \`bibtexabs\` - BibTeX with abstracts
 - \`aastex\` - American Astronomical Society (AAS) format
+- \`ads\` - ADS tagged format
 - \`endnote\` - EndNote reference manager
+- \`procite\` - ProCite format
+- \`ris\` - RIS format (Reference Manager)
+- \`refworks\` - RefWorks format
 - \`medlars\` - MEDLARS format for medical literature
+- \`dcxml\` - Dublin Core XML
+- \`refxml\` - Reference XML
+- \`refabsxml\` - Reference XML with abstracts
+- \`jatsxml\` - JATS XML format
+- \`votable\` - VOTable XML format
+- \`rss\` - RSS feed format
+- \`mnras\` - Monthly Notices RAS format
+- \`soph\` - Solar Physics format
+- \`icarus\` - Icarus journal format
+- \`ams\` - American Meteorological Society
+- \`agu\` - American Geophysical Union
+- \`gsa\` - Geological Society of America
+- \`ieee\` - IEEE format
+- \`custom\` - **Custom format with printf-like syntax**
 
 ## Basic Usage
 
@@ -1356,6 +1431,110 @@ export(
 \`\`\`
 
 Returns plain text in the chosen format, ready to paste into your bibliography.
+
+## Custom Format Syntax
+
+Create **custom bibliography formats** using printf-like field specifiers:
+
+### Field Specifiers
+
+- \`%R\` - Bibcode
+- \`%A\` - Author list
+- \`%l\` - Last name of first author
+- \`%Y\` - Year
+- \`%T\` - Title
+- \`%j\` - Journal (formatted)
+- \`%J\` - Journal (full name)
+- \`%V\` - Volume
+- \`%p\` - Page or article ID
+- \`%G\` - Author list (surname, initials)
+- \`%u\` - URL to ADS abstract page
+
+### Encoding Options
+
+- \`%ZEncoding:unicode\` - Unicode encoding (default)
+- \`%ZEncoding:html\` - HTML entities
+- \`%ZEncoding:latex\` - LaTeX special characters
+- \`%ZEncoding:csv\` - CSV-safe encoding
+
+### Format Controls
+
+- \`%ZLinelength:80\` - Set line wrap length
+- \`%ZHeader:"text"\` - Add header line
+- \`%ZFooter:"text"\` - Add footer line
+
+### Custom Format Examples
+
+**Simple reference list:**
+\`\`\`
+export(
+  bibcodes=["2023ApJ...950..123S"],
+  format="custom",
+  custom_format="%l (%Y), %j, %V, %p.\\n"
+)
+\`\`\`
+Output: "Smith (2023), ApJ, 950, 123."
+
+**CSV export:**
+\`\`\`
+export(
+  bibcodes=[...],
+  format="custom",
+  custom_format="%ZEncoding:csv %ZHeader:'Author,Year,Title,Journal'\\n%G,%Y,%T,%J"
+)
+\`\`\`
+
+**LaTeX with hyperlinks:**
+\`\`\`
+export(
+  bibcodes=[...],
+  format="custom",
+  custom_format="\\\\item \\\\href{%u}{%R} %A: \\\\textit{%T,} %j,%V,%p (%Y)"
+)
+\`\`\`
+
+**Markdown list:**
+\`\`\`
+export(
+  bibcodes=[...],
+  format="custom",
+  custom_format="- **%l et al. (%Y)**: [%T](%u), *%j*, %V, %p\\n"
+)
+\`\`\`
+
+## Advanced Export Parameters
+
+Control author display and formatting:
+
+**maxauthor**: Maximum number of authors to display (default: 200)
+\`\`\`
+export(bibcodes=[...], format="aastex", maxauthor=3)
+\`\`\`
+
+**authorcutoff**: Number of authors before using "et al."
+\`\`\`
+export(bibcodes=[...], format="bibtex", authorcutoff=5)
+\`\`\`
+
+**journalformat**: Journal name format
+- \`1\` - Use AASTeX macros (\\apj, \\mnras, etc.)
+- \`2\` - Use abbreviations (ApJ, MNRAS, etc.)
+- \`3\` - Full journal names
+\`\`\`
+export(bibcodes=[...], format="aastex", journalformat=1)
+\`\`\`
+
+**keyformat**: BibTeX key format (for bibtex/bibtexabs)
+- Template with %1H (first author), %Y (year), %zm (journal abbreviation)
+\`\`\`
+export(bibcodes=[...], format="bibtex", keyformat="%1H%Y")
+\`\`\`
+
+**sort**: Sort order for bibcodes
+- Can use any valid sort field (e.g., "date desc", "first_author asc")
+\`\`\`
+export(bibcodes=[...], format="bibtex", sort="date desc")
+\`\`\`
 
 ## Capacity
 
@@ -1376,12 +1555,12 @@ Returns plain text in the chosen format, ready to paste into your bibliography.
 
 3. Export in desired format:
    \`\`\`
-   export(bibcodes=[...], format="bibtex")
+   export(bibcodes=[...], format="bibtex", journalformat=2)
    \`\`\`
 
 4. Copy output to your LaTeX document
 
-### Export Library Contents
+### Export Library Contents with Custom Format
 
 1. Get library papers:
    \`\`\`
@@ -1390,9 +1569,14 @@ Returns plain text in the chosen format, ready to paste into your bibliography.
 
 2. Extract bibcodes from library
 
-3. Export:
+3. Export with custom format for blog post:
    \`\`\`
-   export(bibcodes=[...], format="bibtex")
+   export(
+     bibcodes=[...],
+     format="custom",
+     custom_format="- [%T](%u) by %A (%Y)\\n",
+     sort="date desc"
+   )
    \`\`\`
 
 ### Create Bibliography from Citation Network
@@ -1405,35 +1589,64 @@ Returns plain text in the chosen format, ready to paste into your bibliography.
    \`\`\`
 
 3. Combine bibcodes from both
-4. Export merged list:
+4. Export merged list with author limit:
    \`\`\`
-   export(bibcodes=[...], format="bibtex")
+   export(bibcodes=[...], format="aastex", maxauthor=10, authorcutoff=3)
    \`\`\`
+
+### Export for Specific Journal Requirements
+
+**ApJ submission:**
+\`\`\`
+export(bibcodes=[...], format="aastex", journalformat=1)
+\`\`\`
+
+**MNRAS submission:**
+\`\`\`
+export(bibcodes=[...], format="mnras")
+\`\`\`
+
+**IEEE paper:**
+\`\`\`
+export(bibcodes=[...], format="ieee")
+\`\`\`
 
 ## Format-Specific Tips
 
-### BibTeX
+### BibTeX / BibTeXabs
 
 - Most common for LaTeX users
-- Automatically generates cite keys
+- Automatically generates cite keys (customize with keyformat)
 - Compatible with BibLaTeX
+- Use \`bibtexabs\` to include abstracts
 
 ### AASTeX
 
-- Required for AAS journal submissions
+- Required for AAS journal submissions (ApJ, AJ, ApJS, etc.)
 - Uses \`\\bibitem\` format
-- Ready for ApJ, AJ, etc.
+- Set \`journalformat=1\` for AASTeX journal macros
 
-### EndNote
+### EndNote / ProCite / RIS / RefWorks
 
-- Import directly into EndNote
+- Import directly into reference managers
 - Preserves all metadata
 - Good for non-LaTeX workflows
+- Each tool has its own preferred format
 
-### MEDLARS
+### XML Formats (JATS, Dublin Core, VOTable)
 
-- Primarily for medical/life sciences
-- Compatible with PubMed workflows
+- Structured metadata export
+- Machine-readable
+- Good for data processing pipelines
+- JATS XML common for journal publishing systems
+
+### Custom Format
+
+- **Maximum flexibility** for any output style
+- Supports all field specifiers
+- Can generate markdown, HTML, LaTeX, CSV, or plain text
+- Perfect for journal styles not in standard formats
+- Use encoding options to ensure proper character handling
 
 ## Integration with Libraries
 
@@ -1442,7 +1655,7 @@ Returns plain text in the chosen format, ready to paste into your bibliography.
 1. \`create_library(name="Paper Bibliography")\`
 2. Add papers via search or manual selection
 3. Review and annotate
-4. Export when ready to cite
+4. Export when ready to cite (with custom format if needed)
 5. Update library as paper evolves
 
 This workflow ensures you can track which papers you've reviewed and re-export as needed.
@@ -1452,7 +1665,8 @@ This workflow ensures you can track which papers you've reviewed and re-export a
 - Batch export requests when possible
 - Cache exported bibliographies locally
 - Use libraries to organize papers before exporting
-- Consider response size for very large bibliographies (2000 papers)`,
+- Consider response size for very large bibliographies (2000 papers)
+- Use custom format instead of post-processing output when possible`,
             },
           },
         ],
