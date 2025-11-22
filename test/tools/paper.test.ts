@@ -50,7 +50,7 @@ describe('Paper Tool', () => {
 
       const result = await getPaper(client, {
         bibcode: '2024ApJ...123..456A',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -76,7 +76,7 @@ describe('Paper Tool', () => {
       await expect(
         getPaper(client, {
           bibcode: 'nonexistent',
-          response_format: ResponseFormat.TEXT
+          response_format: ResponseFormat.MARKDOWN
         })
       ).rejects.toThrow('Paper with bibcode nonexistent not found');
     });
@@ -114,7 +114,7 @@ describe('Paper Tool', () => {
 
       await getPaper(client, {
         bibcode: '2024ApJ...123..456A',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -134,7 +134,7 @@ describe('Paper Tool', () => {
 
       await getPaper(client, {
         bibcode: '2024ApJ...123..456A',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];

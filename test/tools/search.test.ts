@@ -43,7 +43,7 @@ describe('Search Tool', () => {
         query: 'author:"Einstein"',
         rows: 10,
         start: 0,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -70,7 +70,7 @@ describe('Search Tool', () => {
         query: 'black holes',
         rows: 100,
         start: 100,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -96,7 +96,7 @@ describe('Search Tool', () => {
         query: 'test',
         rows: 10,
         start: 0,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       // start (0) + rows (10) = 10 < numFound (150)
@@ -118,7 +118,7 @@ describe('Search Tool', () => {
         query: 'test',
         rows: 25,
         start: 50,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       // start (50) + rows (25) = 75 < numFound (250)
@@ -140,7 +140,7 @@ describe('Search Tool', () => {
         query: 'test',
         rows: 20,
         start: 0,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       // start (0) + rows (20) = 20 >= numFound (10)
@@ -158,7 +158,7 @@ describe('Search Tool', () => {
         query: 'test',
         rows: MAX_ROWS,
         start: 0,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -177,7 +177,7 @@ describe('Search Tool', () => {
         rows: 10,
         start: 0,
         sort: 'citation_count desc',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -216,7 +216,7 @@ describe('Search Tool', () => {
         query: 'nonexistent',
         rows: 10,
         start: 0,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(result).toBeDefined();

@@ -38,7 +38,7 @@ describe('Metrics Tool', () => {
 
       const result = await getMetrics(client, {
         bibcodes: ['2024ApJ...123..456A'],
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -62,7 +62,7 @@ describe('Metrics Tool', () => {
 
       await getMetrics(client, {
         bibcodes: ['bib1', 'bib2', 'bib3'],
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [, init] = mockFetch.mock.calls[0];
@@ -76,7 +76,7 @@ describe('Metrics Tool', () => {
 
       await getMetrics(client, {
         bibcodes,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [, init] = mockFetch.mock.calls[0];
@@ -105,7 +105,7 @@ describe('Metrics Tool', () => {
 
       await getMetrics(client, {
         bibcodes: ['test'],
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [, init] = mockFetch.mock.calls[0];

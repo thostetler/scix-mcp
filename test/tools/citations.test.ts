@@ -40,7 +40,7 @@ describe('Citations and References Tools', () => {
       const result = await getCitations(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 10,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -64,7 +64,7 @@ describe('Citations and References Tools', () => {
       await getCitations(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 25,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -79,7 +79,7 @@ describe('Citations and References Tools', () => {
       await getCitations(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 10,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -116,7 +116,7 @@ describe('Citations and References Tools', () => {
       const result = await getCitations(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 10,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(result).toBeDefined();
@@ -145,7 +145,7 @@ describe('Citations and References Tools', () => {
       const result = await getReferences(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 10,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -169,7 +169,7 @@ describe('Citations and References Tools', () => {
       await getReferences(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 50,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -184,7 +184,7 @@ describe('Citations and References Tools', () => {
       await getReferences(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 10,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -221,7 +221,7 @@ describe('Citations and References Tools', () => {
       const result = await getReferences(client, {
         bibcode: '2024ApJ...123..456A',
         rows: 10,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(result).toBeDefined();

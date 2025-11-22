@@ -86,8 +86,12 @@ export async function getLibrary(
   input: GetLibraryInput
 ): Promise<string> {
   const data = await client.get(`biblib/libraries/${input.library_id}`);
-  const library = data.metadata;
+  const library = data.metadata ?? data; // Some responses return metadata at the root
   const documents: string[] = data.documents || [];
+
+  if (!library || !library.name) {
+    throw new Error('Unexpected get_library response: missing library metadata');
+  }
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify({ metadata: library, documents }, null, 2);
@@ -132,7 +136,11 @@ export async function createLibrary(
   }
 
   const data = await client.post('biblib/libraries', payload);
-  const library = data.metadata;
+  const library = data.metadata ?? data; // SciX may return metadata as the root object or under `metadata`
+
+  if (!library || !library.name) {
+    throw new Error('Unexpected create_library response: missing library metadata');
+  }
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(library, null, 2);
@@ -183,7 +191,11 @@ export async function editLibrary(
 
   // ADS/SciX expects metadata updates on the documents endpoint, not libraries
   const data = await client.put(`biblib/documents/${input.library_id}`, payload);
-  const library = data.metadata;
+  const library = data.metadata ?? data; // Some responses return the payload at the root
+
+  if (!library || !library.name) {
+    throw new Error('Unexpected edit_library response: missing library metadata');
+  }
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(library, null, 2);
@@ -223,21 +235,69 @@ export async function addDocumentsByQuery(
   client: SciXAPIClient,
   input: AddDocumentsByQueryInput
 ): Promise<string> {
-  const payload = {
-    query: input.query,
-    rows: input.rows
-  };
+  const payload = { query: input.query, rows: input.rows };
 
-  // ADS/SciX query add endpoint lives under /biblib/documents/{id}/query
-  const data = await client.post(`biblib/documents/${input.library_id}/query`, payload);
+  try {
+    // ADS/SciX query add endpoint lives under /biblib/documents/{id}/query
+    const data = await client.post(`biblib/documents/${input.library_id}/query`, payload);
 
-  if (input.response_format === ResponseFormat.JSON) {
-    return JSON.stringify(data, null, 2);
+    if (input.response_format === ResponseFormat.JSON) {
+      return JSON.stringify(data, null, 2);
+    }
+
+    return `Documents added to library from query.\n\n` +
+      `**Query**: ${input.query}\n` +
+      `**Documents added**: ${data.number_added || 0}`;
+  } catch (error: any) {
+    const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+    const isNotFound = message.includes('not found') || message.includes('404');
+
+    if (!isNotFound) {
+      throw error;
+    }
   }
 
-  return `Documents added to library from query.\n\n` +
+  // Fallback: run a search and add the bibcodes manually if the query endpoint is unavailable
+  const searchData = await client.get('search/query', {
+    q: input.query,
+    rows: input.rows,
+    fl: 'bibcode',
+    start: 0
+  });
+
+  const docs = searchData?.response?.docs ?? [];
+  const bibcodes = docs
+    .map((doc: any) => doc.bibcode)
+    .filter((bibcode: any) => typeof bibcode === 'string' && bibcode.length > 0);
+
+  if (bibcodes.length === 0) {
+    const message = `No documents found for query '${input.query}'.`;
+    return input.response_format === ResponseFormat.JSON
+      ? JSON.stringify({ query: input.query, added: 0, found: 0, library_id: input.library_id }, null, 2)
+      : message;
+  }
+
+  const data = await client.post(`biblib/documents/${input.library_id}`, {
+    bibcode: bibcodes,
+    action: DocumentAction.ADD
+  });
+
+  const added = data?.number_added ?? bibcodes.length;
+
+  if (input.response_format === ResponseFormat.JSON) {
+    return JSON.stringify({
+      query: input.query,
+      library_id: input.library_id,
+      requested: input.rows,
+      found: bibcodes.length,
+      added
+    }, null, 2);
+  }
+
+  return `Documents added to library from query (search fallback).\n\n` +
     `**Query**: ${input.query}\n` +
-    `**Documents added**: ${data.number_added || 0}`;
+    `**Results found**: ${bibcodes.length}\n` +
+    `**Documents added**: ${added}`;
 }
 
 // Library operation (union, intersection, difference, copy, empty)

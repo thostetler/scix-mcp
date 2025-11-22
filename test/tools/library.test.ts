@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SciXAPIClient } from '../../src/client.js';
 import { setupMockFetch, restoreFetch } from '../helpers/mockFetch.js';
 import {
@@ -56,7 +56,7 @@ describe('Library Tools', () => {
 
       const result = await getLibraries(client, {
         type: 'all',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -71,7 +71,7 @@ describe('Library Tools', () => {
 
       await getLibraries(client, {
         type: 'owner',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -117,7 +117,7 @@ describe('Library Tools', () => {
 
       const result = await getLibrary(client, {
         library_id: 'lib1',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -143,6 +143,32 @@ describe('Library Tools', () => {
       const parsed = JSON.parse(result);
       expect(parsed).toEqual(mockData);
     });
+
+    it('should handle library metadata returned at root level', async () => {
+      const mockData = {
+        id: 'lib1',
+        name: 'Root Library',
+        description: 'Test',
+        num_documents: 0,
+        date_created: '2024-01-01',
+        date_last_modified: '2024-01-02',
+        permission: 'owner',
+        owner: 'user@example.com',
+        public: false,
+        num_users: 1,
+        documents: []
+      };
+
+      setupMockFetch({ body: mockData });
+
+      const result = await getLibrary(client, {
+        library_id: 'lib1',
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      expect(result).toContain('Root Library');
+      expect(result).toContain('No documents');
+    });
   });
 
   describe('createLibrary', () => {
@@ -165,7 +191,7 @@ describe('Library Tools', () => {
         description: 'Description',
         public: true,
         bibcodes: ['bibcode1', 'bibcode2'],
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -193,12 +219,34 @@ describe('Library Tools', () => {
       await createLibrary(client, {
         name: 'Test',
         public: false,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [, init] = mockFetch.mock.calls[0];
       const body = JSON.parse(init.body);
       expect(body.bibcodes).toBeUndefined();
+    });
+
+    it('should handle create responses without metadata wrapper', async () => {
+      const mockResponse = {
+        id: 'rootlib',
+        name: 'Root Create',
+        description: 'Direct payload',
+        num_documents: 0,
+        date_created: '2024-01-01'
+      };
+
+      const mockFetch = setupMockFetch({ body: mockResponse });
+
+      const result = await createLibrary(client, {
+        name: 'Root Create',
+        public: false,
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result).toContain('Root Create');
+      expect(result).toContain('rootlib');
     });
   });
 
@@ -208,7 +256,7 @@ describe('Library Tools', () => {
 
       const result = await deleteLibrary(client, {
         library_id: 'lib1',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -251,7 +299,7 @@ describe('Library Tools', () => {
         name: 'Updated Name',
         description: 'Updated Description',
         public: true,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -277,7 +325,7 @@ describe('Library Tools', () => {
       await editLibrary(client, {
         library_id: 'lib1',
         name: 'New Name',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [, init] = mockFetch.mock.calls[0];
@@ -297,7 +345,7 @@ describe('Library Tools', () => {
         library_id: 'lib1',
         bibcodes: ['bib1', 'bib2', 'bib3'],
         action: DocumentAction.ADD,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -320,7 +368,7 @@ describe('Library Tools', () => {
         library_id: 'lib1',
         bibcodes: ['bib1', 'bib2'],
         action: DocumentAction.REMOVE,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(result).toContain('2 documents removed from library');
@@ -336,7 +384,7 @@ describe('Library Tools', () => {
         library_id: 'lib1',
         query: 'author:"Einstein"',
         rows: 20,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -350,6 +398,84 @@ describe('Library Tools', () => {
       expect(result).toContain('Documents added to library');
       expect(result).toContain('15');
     });
+
+    it('should fall back to search when query endpoint returns 404', async () => {
+      const searchResponse = {
+        response: { docs: [{ bibcode: 'bib1' }, { bibcode: 'bib2' }] }
+      };
+      const addResponse = { number_added: 2 };
+
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          json: async () => ({}),
+          text: async () => ''
+        } as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => searchResponse,
+          text: async () => JSON.stringify(searchResponse)
+        } as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => addResponse,
+          text: async () => JSON.stringify(addResponse)
+        } as any);
+
+      global.fetch = mockFetch as any;
+
+      const result = await addDocumentsByQuery(client, {
+        library_id: 'lib1',
+        query: 'black hole',
+        rows: 2,
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockFetch.mock.calls[0][0]).toContain('biblib/documents/lib1/query');
+      expect(mockFetch.mock.calls[1][0]).toContain('search/query');
+      expect(mockFetch.mock.calls[2][0]).toContain('biblib/documents/lib1');
+      expect(result).toContain('Documents added');
+      expect(result).toContain('2');
+    });
+
+    it('should respond gracefully when search finds no documents', async () => {
+      const searchResponse = { response: { docs: [] } };
+
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          json: async () => ({}),
+          text: async () => ''
+        } as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => searchResponse,
+          text: async () => JSON.stringify(searchResponse)
+        } as any);
+
+      global.fetch = mockFetch as any;
+
+      const result = await addDocumentsByQuery(client, {
+        library_id: 'lib1',
+        query: 'noresults',
+        rows: 5,
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      expect(result).toContain("No documents found for query 'noresults'");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('libraryOperation', () => {
@@ -361,7 +487,7 @@ describe('Library Tools', () => {
         library_id: 'lib1',
         operation: LibraryOperation.UNION,
         source_library_ids: ['lib2', 'lib3'],
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url, init] = mockFetch.mock.calls[0];
@@ -384,7 +510,7 @@ describe('Library Tools', () => {
         operation: LibraryOperation.COPY,
         name: 'Copy of Library',
         description: 'Copied library',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [, init] = mockFetch.mock.calls[0];
@@ -401,7 +527,7 @@ describe('Library Tools', () => {
       await libraryOperation(client, {
         library_id: 'lib1',
         operation: LibraryOperation.EMPTY,
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       // Empty operation doesn't need source libraries
@@ -423,7 +549,7 @@ describe('Library Tools', () => {
 
       const result = await getPermissions(client, {
         library_id: 'lib1',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -443,7 +569,7 @@ describe('Library Tools', () => {
         library_id: 'lib1',
         email: 'user@example.com',
         permission: 'write',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url, init] = mockFetch.mock.calls[0];
@@ -465,7 +591,7 @@ describe('Library Tools', () => {
       const result = await transferLibrary(client, {
         library_id: 'lib1',
         email: 'newowner@example.com',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url, init] = mockFetch.mock.calls[0];
@@ -494,7 +620,7 @@ describe('Library Tools', () => {
       const result = await getAnnotation(client, {
         library_id: 'lib1',
         bibcode: '2024ApJ...123..456A',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url] = mockFetch.mock.calls[0];
@@ -510,7 +636,7 @@ describe('Library Tools', () => {
       const result = await getAnnotation(client, {
         library_id: 'lib1',
         bibcode: '2024ApJ...123..456A',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       expect(result).toContain('No annotation found');
@@ -525,7 +651,7 @@ describe('Library Tools', () => {
         library_id: 'lib1',
         bibcode: '2024ApJ...123..456A',
         content: 'My updated note',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url, init] = mockFetch.mock.calls[0];
@@ -546,7 +672,7 @@ describe('Library Tools', () => {
       const result = await deleteAnnotation(client, {
         library_id: 'lib1',
         bibcode: '2024ApJ...123..456A',
-        response_format: ResponseFormat.TEXT
+        response_format: ResponseFormat.MARKDOWN
       });
 
       const [url, init] = mockFetch.mock.calls[0];
