@@ -32,8 +32,8 @@ The `search` tool uses Solr query syntax:
 - `property:refereed` - Peer-reviewed only
 
 **Citation searches:**
-- `citations(bibcode:X)` - Papers citing X
-- `references(bibcode:X)` - Papers cited by X
+- `citations(identifier:X)` - Papers citing X
+- `references(identifier:X)` - Papers cited by X
 
 **Boolean operators (UPPERCASE required):**
 - `AND`, `OR`, `NOT`

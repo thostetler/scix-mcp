@@ -5,7 +5,7 @@ import { formatPaperMarkdown } from '../formatters.js';
 
 export async function getPaper(client: SciXAPIClient, input: GetPaperInput): Promise<string> {
   const params = {
-    q: `bibcode:${input.bibcode}`,
+    q: `identifier:${input.bibcode}`,
     fl: DEFAULT_FIELDS,
     rows: 1
   };
@@ -14,7 +14,7 @@ export async function getPaper(client: SciXAPIClient, input: GetPaperInput): Pro
   const docs = response.response?.docs || [];
 
   if (docs.length === 0) {
-    throw new Error(`Paper with bibcode ${input.bibcode} not found`);
+    throw new Error(`Paper with identifier ${input.bibcode} not found`);
   }
 
   const paper = docs[0];

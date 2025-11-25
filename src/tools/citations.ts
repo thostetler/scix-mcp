@@ -5,7 +5,7 @@ import { formatCitationNetworkMarkdown } from '../formatters.js';
 
 export async function getCitations(client: SciXAPIClient, input: CitationsInput): Promise<string> {
   const params = {
-    q: `citations(bibcode:${input.bibcode})`,
+    q: `citations(identifier:${input.bibcode})`,
     fl: DEFAULT_FIELDS,
     rows: input.rows,
     sort: 'citation_count desc'
@@ -24,7 +24,7 @@ export async function getCitations(client: SciXAPIClient, input: CitationsInput)
 
 export async function getReferences(client: SciXAPIClient, input: CitationsInput): Promise<string> {
   const params = {
-    q: `references(bibcode:${input.bibcode})`,
+    q: `references(identifier:${input.bibcode})`,
     fl: DEFAULT_FIELDS,
     rows: input.rows,
     sort: 'citation_count desc'
