@@ -1,6 +1,6 @@
 {
   "name": "scix-mcp",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "MCP server for NASA Astrophysics Data System API",
   "type": "module",
   "bin": {
