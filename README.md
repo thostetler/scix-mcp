@@ -61,6 +61,7 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 - **Citation Metrics**: Calculate h-index, citation counts, and usage statistics
 - **Citation Network**: Explore forward and backward citations
 - **Export**: Generate citations in BibTeX, AASTeX, EndNote, and MEDLARS formats
+- **Documentation Search**: Query SciX help/docs content via the `search_docs` tool
 - **Dual Format**: Support for both human-readable Markdown and machine-readable JSON
 
 ## Available Tools
@@ -80,6 +81,10 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 ### Export
 
 - `export`: Export `bibcodes` (1-2000) in `format` (`bibtex` | `aastex` | `endnote` | `medlars`). Returns plain text in the chosen format.
+
+### Documentation
+
+- `search_docs`: Search SciX help documentation. Params: `query` (required, natural language), `limit` (1-20, default 5). Returns a ranked list with title, section/subsection, source URL, relevance score, and a focused snippet.
 
 ### Libraries
 
@@ -170,14 +175,15 @@ Tests are organized in the `test/` directory:
 test/
 ├── helpers/
 │   └── mockFetch.ts        # Fetch mocking utilities
-├── client.test.ts           # HTTP client tests
+├── client.test.ts          # HTTP client tests
+├── search-docs.test.ts     # Documentation search tests
 └── tools/
-    ├── search.test.ts       # Search tool tests
-    ├── paper.test.ts        # Paper details tests
-    ├── metrics.test.ts      # Metrics tests
-    ├── citations.test.ts    # Citations/references tests
-    ├── export.test.ts       # Export tests
-    └── library.test.ts      # Library management tests
+    ├── search.test.ts      # Search tool tests
+    ├── paper.test.ts       # Paper details tests
+    ├── metrics.test.ts     # Metrics tests
+    ├── citations.test.ts   # Citations/references tests
+    ├── export.test.ts      # Export tests
+    └── library.test.ts     # Library management tests
 ```
 
 ### Test Coverage
@@ -202,7 +208,7 @@ To run tests against the real ADS API (skipped by default):
 
 1. Set your real API key:
    ```bash
-   export ADS_DEV_KEY=your_real_api_key
+   export SCIX_API_TOKEN=your_real_api_key
    ```
 
 2. Run integration tests (not implemented yet):
