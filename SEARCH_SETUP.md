@@ -6,7 +6,7 @@ Fast, in-memory search for SciX help documentation using MiniSearch.
 
 This search system provides efficient full-text search across SciX help documentation with:
 
-- **53 indexed chunks** from scixplorer.org/scixhelp (404 pages filtered out)
+- **52 indexed chunks** from scixplorer.org/scixhelp (404/nav pages filtered out)
 - **Fuzzy matching** for typo tolerance
 - **Prefix search** for partial word matching
 - **Weighted ranking** (titles boosted 4x, sections 3x, subsections 2x)
@@ -195,7 +195,7 @@ pnpm test search-docs
 
 ## Performance
 
-- **Index build time**: ~5ms (53 documents after filtering)
+- **Index build time**: ~5ms (52 documents after filtering)
 - **Search latency**: <1ms for most queries
 - **Memory usage**: ~50KB for index
 - **Cache**: Index built once on first search
