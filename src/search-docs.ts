@@ -63,19 +63,51 @@ function normalizeContent(content: string): string {
   return stripMarkdownLinks(content).replace(/\s+/g, ' ').trim();
 }
 
-function deriveTitle(doc: DocChunk): string {
-  return (doc.subsection && doc.subsection.trim()) ||
-    (doc.section && doc.section.trim()) ||
-    (doc.title && doc.title.trim()) ||
-    doc.source_file ||
-    doc.id;
+function extractFirstHeading(raw: string): string {
+  const headingMatch = raw.match(/^(#{1,6})\s+(.+)$/m);
+  if (!headingMatch) {
+    return '';
+  }
+  return normalizeContent(headingMatch[2] || '');
 }
 
-function isWhatsNew(doc: DocChunk, cleanTitle: string, cleanSection: string, cleanSubsection: string): boolean {
-  const matcher = /whats[_\s-]*new/i;
-  return matcher.test(doc.source_file || '') ||
-    matcher.test(doc.source_url || '') ||
-    matcher.test(doc.id || '');
+function slugToTitle(slug: string): string {
+  if (!slug) return '';
+  return slug
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function isNavText(text: string): boolean {
+  const matcher = /what['’]?s?\s*[_\s-]*new/i;
+  return matcher.test(text || '');
+}
+
+function deriveTitle(doc: DocChunk, heading: string): string {
+  const candidates = [
+    heading,
+    doc.subsection?.trim(),
+    doc.section?.trim(),
+    doc.title?.trim(),
+    slugToTitle(doc.source_file),
+    doc.id
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (!isNavText(candidate)) {
+      return candidate;
+    }
+  }
+
+  return doc.id;
+}
+
+function isWhatsNew(doc: DocChunk): boolean {
+  return isNavText(doc.source_file || '') ||
+    isNavText(doc.source_url || '') ||
+    isNavText(doc.id || '');
 }
 
 async function initIndex(): Promise<void> {
@@ -94,8 +126,10 @@ async function initIndex(): Promise<void> {
   const parsedDocs: DocChunk[] = JSON.parse(raw);
   docs = parsedDocs
     .map((doc) => {
-      const cleanContent = normalizeContent(doc.content || '');
-      const cleanTitle = deriveTitle(doc);
+      const rawContent = doc.content || '';
+      const heading = extractFirstHeading(rawContent);
+      const cleanContent = normalizeContent(rawContent);
+      const cleanTitle = deriveTitle(doc, heading);
       const cleanSection = doc.section?.trim() || '';
       const cleanSubsection = doc.subsection?.trim() || '';
 
@@ -105,15 +139,20 @@ async function initIndex(): Promise<void> {
         section: cleanSection,
         subsection: cleanSubsection,
         content: cleanContent,
-        char_count: cleanContent.length
-      };
+        char_count: cleanContent.length,
+        _heading: heading
+      } as DocChunk & { _heading: string };
     })
     .filter((doc) => {
       if (!doc.title || !doc.content || doc.title === '404' || doc.content.length === 0) {
         return false;
       }
 
-      return !isWhatsNew(doc, doc.title, doc.section, doc.subsection);
+      return !isWhatsNew(doc);
+    })
+    .map((doc) => {
+      const { _heading, ...rest } = doc as DocChunk & { _heading?: string };
+      return rest;
     });
 
   miniSearch = new MiniSearch({
