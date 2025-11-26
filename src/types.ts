@@ -227,3 +227,11 @@ export type TransferLibraryInput = z.infer<typeof TransferLibraryInputSchema>;
 export type GetAnnotationInput = z.infer<typeof GetAnnotationInputSchema>;
 export type ManageAnnotationInput = z.infer<typeof ManageAnnotationInputSchema>;
 export type DeleteAnnotationInput = z.infer<typeof DeleteAnnotationInputSchema>;
+
+// Search Documentation
+export const SearchDocsInputSchema = z.object({
+  query: z.string().min(1).max(500).describe('Natural language search query for documentation'),
+  limit: z.number().int().min(1).max(20).default(5).describe('Maximum number of results to return'),
+});
+
+export type SearchDocsInput = z.infer<typeof SearchDocsInputSchema>;

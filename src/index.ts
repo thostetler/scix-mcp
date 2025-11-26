@@ -19,6 +19,7 @@ import { getPaper } from './tools/paper.js';
 import { getMetrics } from './tools/metrics.js';
 import { getCitations, getReferences } from './tools/citations.js';
 import { exportCitations } from './tools/export.js';
+import { searchDocs } from './search-docs.js';
 import {
   getLibraries,
   getLibrary,
@@ -54,7 +55,8 @@ import {
   TransferLibraryInputSchema,
   GetAnnotationInputSchema,
   ManageAnnotationInputSchema,
-  DeleteAnnotationInputSchema
+  DeleteAnnotationInputSchema,
+  SearchDocsInputSchema
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -750,6 +752,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           openWorldHint: true,
         },
       },
+      {
+        name: 'search_docs',
+        description: 'Search SciX help documentation for information about search syntax, features, API usage, and best practices.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Natural language search query (e.g., "how to search by author", "export formats", "library permissions")',
+            },
+            limit: {
+              type: 'number',
+              description: 'Maximum number of results to return (1-20, default 5)',
+              default: 5,
+            },
+          },
+          required: ['query'],
+        },
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
     ],
   };
 });
@@ -949,6 +976,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const result = await deleteAnnotation(client, input);
         return {
           content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'search_docs': {
+        const input = SearchDocsInputSchema.parse(args);
+        const results = await searchDocs(input.query, input.limit);
+
+        if (results.length === 0) {
+          return {
+            content: [{ type: 'text', text: 'No documentation found for your query.' }],
+          };
+        }
+
+        const formatted = results.map((r, i) => {
+          let text = `## ${i + 1}. ${r.title}\n`;
+          if (r.subsection) {
+            text += `**Section**: ${r.section} > ${r.subsection}\n`;
+          } else if (r.section) {
+            text += `**Section**: ${r.section}\n`;
+          }
+          text += `**Source**: ${r.source_file} ([view online](${r.source_url}))\n`;
+          text += `**Relevance**: ${r.score.toFixed(1)}\n\n`;
+          text += `${r.snippet}\n`;
+          return text;
+        }).join('\n---\n\n');
+
+        const header = `# SciX Documentation Search Results\n\nFound ${results.length} result${results.length === 1 ? '' : 's'} for "${input.query}":\n\n`;
+
+        return {
+          content: [{ type: 'text', text: header + formatted }],
         };
       }
 
