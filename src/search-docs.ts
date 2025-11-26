@@ -71,6 +71,13 @@ function deriveTitle(doc: DocChunk): string {
     doc.id;
 }
 
+function isWhatsNew(doc: DocChunk, cleanTitle: string, cleanSection: string, cleanSubsection: string): boolean {
+  const matcher = /whats[_\s-]*new/i;
+  return matcher.test(doc.source_file || '') ||
+    matcher.test(doc.source_url || '') ||
+    matcher.test(doc.id || '');
+}
+
 async function initIndex(): Promise<void> {
   if (miniSearch) {
     return;
@@ -88,14 +95,26 @@ async function initIndex(): Promise<void> {
   docs = parsedDocs
     .map((doc) => {
       const cleanContent = normalizeContent(doc.content || '');
+      const cleanTitle = deriveTitle(doc);
+      const cleanSection = doc.section?.trim() || '';
+      const cleanSubsection = doc.subsection?.trim() || '';
+
       return {
         ...doc,
-        title: deriveTitle(doc),
+        title: cleanTitle,
+        section: cleanSection,
+        subsection: cleanSubsection,
         content: cleanContent,
         char_count: cleanContent.length
       };
     })
-    .filter((doc) => doc.title && doc.content && doc.title !== '404' && doc.content.length > 0);
+    .filter((doc) => {
+      if (!doc.title || !doc.content || doc.title === '404' || doc.content.length === 0) {
+        return false;
+      }
+
+      return !isWhatsNew(doc, doc.title, doc.section, doc.subsection);
+    });
 
   miniSearch = new MiniSearch({
     fields: ['title', 'section', 'subsection', 'content', 'doc_type', 'category'],
