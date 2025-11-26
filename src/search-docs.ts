@@ -6,6 +6,7 @@ import MiniSearch, { type SearchOptions } from 'minisearch';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DOCS_PATH = path.join(__dirname, '..', 'data', 'scix', 'chunked-index.json');
 const SNIPPET_MAX_LENGTH = 260;
+const MIN_SCORE_RATIO = 0.4;
 
 const BASE_SEARCH_OPTIONS: SearchOptions = {
   prefix: true,
@@ -54,6 +55,22 @@ interface SearchStats {
 let docs: DocChunk[] = [];
 let miniSearch: MiniSearch<DocChunk> | null = null;
 
+function stripMarkdownLinks(text: string): string {
+  return text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+}
+
+function normalizeContent(content: string): string {
+  return stripMarkdownLinks(content).replace(/\s+/g, ' ').trim();
+}
+
+function deriveTitle(doc: DocChunk): string {
+  return (doc.subsection && doc.subsection.trim()) ||
+    (doc.section && doc.section.trim()) ||
+    (doc.title && doc.title.trim()) ||
+    doc.source_file ||
+    doc.id;
+}
+
 async function initIndex(): Promise<void> {
   if (miniSearch) {
     return;
@@ -69,11 +86,16 @@ async function initIndex(): Promise<void> {
 
   const parsedDocs: DocChunk[] = JSON.parse(raw);
   docs = parsedDocs
-    .filter((doc) => doc.title?.trim() !== '404' && doc.content?.trim())
-    .map((doc) => ({
-      ...doc,
-      char_count: doc.char_count ?? doc.content.length
-    }));
+    .map((doc) => {
+      const cleanContent = normalizeContent(doc.content || '');
+      return {
+        ...doc,
+        title: deriveTitle(doc),
+        content: cleanContent,
+        char_count: cleanContent.length
+      };
+    })
+    .filter((doc) => doc.title && doc.content && doc.title !== '404' && doc.content.length > 0);
 
   miniSearch = new MiniSearch({
     fields: ['title', 'section', 'subsection', 'content', 'doc_type', 'category'],
@@ -147,8 +169,11 @@ export async function searchDocs(query: string, limit = 5, options: SearchOption
   const results = miniSearch!.search(trimmedQuery, searchOptions);
 
   const terms = trimmedQuery.split(/\s+/).filter(Boolean);
+  const topScore = results[0]?.score ?? 0;
+  const filteredResults =
+    topScore > 0 ? results.filter((r) => r.score >= topScore * MIN_SCORE_RATIO) : results;
 
-  return results.slice(0, maxResults).map((r) => {
+  return filteredResults.slice(0, maxResults).map((r) => {
     const snippet = makeSnippet(r.content || '', terms);
 
     return {
