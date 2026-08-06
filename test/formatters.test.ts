@@ -1,0 +1,176 @@
+import { describe, it, expect } from 'vitest';
+import {
+  formatPaperMarkdown,
+  formatPapersListMarkdown,
+  formatMetricsMarkdown,
+  formatCitationNetworkMarkdown,
+} from '../src/formatters.js';
+
+describe('formatters', () => {
+  describe('formatPaperMarkdown', () => {
+    const fullPaper = {
+      bibcode: '2024ApJ...123..456A',
+      title: ['A Study of Black Holes'],
+      author: ['Einstein, A.', 'Hawking, S.'],
+      year: '2024',
+      pub: 'ApJ',
+      citation_count: 100,
+      read_count: 500,
+      doi: ['10.1234/test.doi'],
+      arxiv_id: '2401.12345',
+      abstract: 'We study black holes.',
+    };
+
+    it('renders all present fields', () => {
+      const md = formatPaperMarkdown(fullPaper);
+      expect(md).toContain('# A Study of Black Holes');
+      expect(md).toContain('**Authors:** Einstein, A., Hawking, S.');
+      expect(md).toContain('**Bibcode:** 2024ApJ...123..456A');
+      expect(md).toContain('**Year:** 2024');
+      expect(md).toContain('**Publication:** ApJ');
+      expect(md).toContain('**Citations:** 100');
+      expect(md).toContain('**Reads:** 500');
+      expect(md).toContain('**DOI:** https://doi.org/10.1234/test.doi');
+      expect(md).toContain('**arXiv:** https://arxiv.org/abs/2401.12345');
+      expect(md).toContain('## Abstract\n\nWe study black holes.');
+    });
+
+    it('truncates author lists longer than three with "et al."', () => {
+      const md = formatPaperMarkdown({
+        ...fullPaper,
+        author: ['A, A.', 'B, B.', 'C, C.', 'D, D.'],
+      });
+      expect(md).toContain('**Authors:** A, A., B, B., C, C. et al.');
+      expect(md).not.toContain('D, D.');
+    });
+
+    it('falls back to Untitled / N/A for missing title, year, and publication', () => {
+      const md = formatPaperMarkdown({ bibcode: 'x' });
+      expect(md).toContain('# Untitled');
+      expect(md).toContain('**Year:** N/A');
+      expect(md).toContain('**Publication:** N/A');
+      expect(md).toContain('**Authors:** \n');
+    });
+
+    it('omits citations, reads, doi, arxiv, and abstract when absent or zero', () => {
+      const md = formatPaperMarkdown({
+        bibcode: 'x',
+        title: ['T'],
+        citation_count: 0,
+        read_count: 0,
+      });
+      expect(md).not.toContain('**Citations:**');
+      expect(md).not.toContain('**Reads:**');
+      expect(md).not.toContain('**DOI:**');
+      expect(md).not.toContain('**arXiv:**');
+      expect(md).not.toContain('## Abstract');
+    });
+  });
+
+  describe('formatPapersListMarkdown', () => {
+    it('renders header with total and shown counts plus per-paper entries', () => {
+      const md = formatPapersListMarkdown(
+        [
+          {
+            bibcode: '2024A',
+            title: ['First'],
+            author: ['Alpha, A.', 'Beta, B.'],
+            year: '2024',
+            citation_count: 7,
+          },
+        ],
+        42
+      );
+      expect(md).toContain('Found 42 total papers, showing 1');
+      expect(md).toContain('1. **First**');
+      expect(md).toContain('- Alpha, A. (2024)');
+      expect(md).toContain('- Bibcode: `2024A`');
+      expect(md).toContain('- Citations: 7');
+    });
+
+    it('uses defaults for missing per-paper fields', () => {
+      const md = formatPapersListMarkdown([{ bibcode: 'x' }], 1);
+      expect(md).toContain('1. **Untitled**');
+      expect(md).toContain('- Unknown (N/A)');
+      expect(md).toContain('- Citations: 0');
+    });
+
+    it('renders only the header for an empty list', () => {
+      const md = formatPapersListMarkdown([], 0);
+      expect(md).toContain('Found 0 total papers, showing 0');
+      expect(md).not.toContain('1. **');
+    });
+  });
+
+  describe('formatMetricsMarkdown', () => {
+    it('renders indicators, citation stats, and basic stats when present', () => {
+      const md = formatMetricsMarkdown({
+        indicators: { h: 12, g: 20, i10: 8, m: 1.234, tori: 5.678 },
+        'citation stats': {
+          'total number of citations': 300,
+          'total number of refereed citations': 250,
+          'average number of citations': 12.34,
+          'median number of citations': 9,
+          'number of self-citations': 4,
+        },
+        'basic stats': {
+          'number of papers': 25,
+          'total number of reads': 1000,
+          'average number of reads': 40.5,
+        },
+      });
+      expect(md).toContain('- **h-index:** 12');
+      expect(md).toContain('- **m-index:** 1.23');
+      expect(md).toContain('- **tori index:** 5.68');
+      expect(md).toContain('- **Total citations:** 300');
+      expect(md).toContain('- **Average citations:** 12.3');
+      expect(md).toContain('- **Total papers:** 25');
+      expect(md).toContain('- **Average reads:** 40.5');
+    });
+
+    it('renders only the title when metrics object is empty', () => {
+      const md = formatMetricsMarkdown({});
+      expect(md).toContain('# Citation Metrics');
+      expect(md).not.toContain('## Indicators');
+      expect(md).not.toContain('## Citation Statistics');
+      expect(md).not.toContain('## Paper Statistics');
+    });
+
+    it('defaults missing indicator values to 0', () => {
+      const md = formatMetricsMarkdown({ indicators: {} });
+      expect(md).toContain('- **h-index:** 0');
+      expect(md).toContain('- **m-index:** 0');
+    });
+  });
+
+  describe('formatCitationNetworkMarkdown', () => {
+    it('renders the relationship title, counts, and per-paper entries', () => {
+      const md = formatCitationNetworkMarkdown(
+        [
+          {
+            bibcode: '2024C',
+            title: ['Citing Work'],
+            author: ['Gamma, G.'],
+            year: '2023',
+            citation_count: 3,
+          },
+        ],
+        'Papers citing 2024ApJ...123..456A',
+        50
+      );
+      expect(md).toContain('# Papers citing 2024ApJ...123..456A');
+      expect(md).toContain('Found 50 total papers, showing 1');
+      expect(md).toContain('1. **Citing Work**');
+      expect(md).toContain('- Gamma, G. (2023)');
+      expect(md).toContain('- Bibcode: `2024C`');
+      expect(md).toContain('- Citations: 3');
+    });
+
+    it('renders only the header when there are no related papers', () => {
+      const md = formatCitationNetworkMarkdown([], 'Papers referenced by X', 0);
+      expect(md).toContain('# Papers referenced by X');
+      expect(md).toContain('Found 0 total papers, showing 0');
+      expect(md).not.toContain('1. **');
+    });
+  });
+});
