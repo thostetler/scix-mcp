@@ -1,4 +1,51 @@
-import { getAPIKey, SCIX_API_BASE, REQUEST_TIMEOUT } from './config.js';
+import { getAPIKey, SCIX_API_BASE, REQUEST_TIMEOUT, RATE_LIMIT } from './config.js';
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+interface RequestOptions {
+  params?: Record<string, unknown>;
+  body?: unknown;
+}
+
+function formatRateLimitReset(resetHeader: string | null): string | undefined {
+  if (!resetHeader) {
+    return undefined;
+  }
+  const seconds = Number(resetHeader);
+  if (!Number.isFinite(seconds)) {
+    return undefined;
+  }
+  const date = new Date(seconds * 1000);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  return date.toISOString();
+}
+
+function extractAdsErrorMessage(body: unknown): string | undefined {
+  if (body && typeof body === 'object') {
+    const record = body as Record<string, unknown>;
+    if (typeof record.error === 'string') {
+      return record.error;
+    }
+    if (typeof record.message === 'string') {
+      return record.message;
+    }
+  }
+  return undefined;
+}
+
+export class SciXAPIError extends Error {
+  status: number;
+  body: unknown;
+
+  constructor(message: string, status: number, body: unknown) {
+    super(message);
+    this.name = 'SciXAPIError';
+    this.status = status;
+    this.body = body;
+  }
+}
 
 export class SciXAPIClient {
   private apiKey: string;
@@ -9,7 +56,23 @@ export class SciXAPIClient {
     this.baseURL = SCIX_API_BASE;
   }
 
-  async get(endpoint: string, params?: Record<string, any>): Promise<any> {
+  async get(endpoint: string, params?: Record<string, unknown>): Promise<any> {
+    return this.request('GET', endpoint, { params });
+  }
+
+  async post(endpoint: string, data: unknown): Promise<any> {
+    return this.request('POST', endpoint, { body: data });
+  }
+
+  async put(endpoint: string, data: unknown): Promise<any> {
+    return this.request('PUT', endpoint, { body: data });
+  }
+
+  async delete(endpoint: string): Promise<any> {
+    return this.request('DELETE', endpoint, {});
+  }
+
+  private buildUrl(endpoint: string, params?: Record<string, unknown>): string {
     const url = new URL(`${this.baseURL}/${endpoint}`);
 
     if (params) {
@@ -24,177 +87,102 @@ export class SciXAPIClient {
       });
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
-    try {
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable. Get your key from https://scixplorer.org/user/settings/token');
-      }
-
-      if (response.status === 404) {
-        throw new Error('Resource not found. Check bibcode format or search query.');
-      }
-
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded (5000 requests/day). Please try again later.');
-      }
-
-      if (!response.ok) {
-        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      clearTimeout(timeout);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout after 30 seconds');
-      }
-      throw error;
-    }
+    return url.toString();
   }
 
-  async post(endpoint: string, data: any): Promise<any> {
-    const url = `${this.baseURL}/${endpoint}`;
+  private async request(
+    method: HttpMethod,
+    endpoint: string,
+    { params, body }: RequestOptions
+  ): Promise<any> {
+    const url = this.buildUrl(endpoint, params);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${this.apiKey}`
+    };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     try {
       const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data),
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal
       });
 
       clearTimeout(timeout);
 
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable.');
-      }
-
-      if (response.status === 404) {
-        throw new Error('Resource not found.');
-      }
-
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded (5000 requests/day).');
-      }
-
-      if (!response.ok) {
-        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      clearTimeout(timeout);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout after 30 seconds');
-      }
-      throw error;
-    }
-  }
-
-  async put(endpoint: string, data: any): Promise<any> {
-    const url = `${this.baseURL}/${endpoint}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
-    try {
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable.');
-      }
-
-      if (response.status === 404) {
-        throw new Error('Resource not found.');
-      }
-
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded (5000 requests/day).');
-      }
-
-      if (!response.ok) {
-        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      clearTimeout(timeout);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout after 30 seconds');
-      }
-      throw error;
-    }
-  }
-
-  async delete(endpoint: string): Promise<any> {
-    const url = `${this.baseURL}/${endpoint}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
-    try {
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Check SCIX_API_TOKEN environment variable.');
-      }
-
-      if (response.status === 404) {
-        throw new Error('Resource not found.');
-      }
-
-      if (response.status === 429) {
-        throw new Error('Rate limit exceeded (5000 requests/day).');
-      }
-
-      if (!response.ok) {
-        throw new Error(`SciX API error: ${response.status} ${response.statusText}`);
-      }
-
-      // Some endpoints (e.g., library delete) may return 204/empty bodies
       const text = await response.text();
+
+      if (!response.ok) {
+        const parsedErrorBody = this.safeParseJson(text);
+        const rateLimitReset = response.headers?.get(RATE_LIMIT.HEADERS.RESET) ?? null;
+        throw this.buildError(
+          response.status,
+          response.statusText,
+          method,
+          endpoint,
+          parsedErrorBody,
+          rateLimitReset
+        );
+      }
+
       return text ? JSON.parse(text) : {};
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeout);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout after 30 seconds');
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Request timeout after ${REQUEST_TIMEOUT / 1000} seconds`);
       }
       throw error;
     }
+  }
+
+  private safeParseJson(text: string): unknown {
+    if (!text) {
+      return {};
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private buildError(
+    status: number,
+    statusText: string,
+    method: HttpMethod,
+    endpoint: string,
+    body: unknown,
+    rateLimitReset: string | null = null
+  ): SciXAPIError {
+    const context = `for ${method} ${endpoint}`;
+    const adsMessage = extractAdsErrorMessage(body);
+
+    let message: string;
+    if (status === 401) {
+      message = `Authentication failed ${context}. Check SCIX_API_TOKEN environment variable. ` +
+        `Get your key from https://scixplorer.org/user/settings/token`;
+    } else if (status === 404) {
+      message = `Resource not found ${context}.`;
+    } else if (status === 429) {
+      message = `Rate limit exceeded (5000 requests/day) ${context}. Please try again later.`;
+      const resetTime = formatRateLimitReset(rateLimitReset);
+      if (resetTime) {
+        message += ` Retry after ${resetTime}.`;
+      }
+    } else {
+      message = `SciX API error: ${status} ${statusText} ${context}`;
+    }
+
+    if (adsMessage) {
+      message += ` — ${adsMessage}`;
+    }
+
+    return new SciXAPIError(message, status, body);
   }
 }

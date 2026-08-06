@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { SciXAPIClient } from '../src/client.js';
+import { SciXAPIClient, SciXAPIError } from '../src/client.js';
 import { setupMockFetch, createTimeoutFetch, restoreFetch } from './helpers/mockFetch.js';
+import { REQUEST_TIMEOUT } from '../src/config.js';
 
 describe('SciXAPIClient', () => {
   let client: SciXAPIClient;
@@ -30,7 +31,8 @@ describe('SciXAPIClient', () => {
       expect(url).toContain('test/endpoint');
       expect(init.method).toBe('GET');
       expect(init.headers['Authorization']).toBe('Bearer test-api-key');
-      expect(init.headers['Content-Type']).toBe('application/json');
+      // GET has no body, so no Content-Type header is sent
+      expect(init.headers['Content-Type']).toBeUndefined();
     });
 
     it('should encode query parameters correctly', async () => {
@@ -276,7 +278,7 @@ describe('SciXAPIClient', () => {
   });
 
   describe('Content-Type headers', () => {
-    it('should set application/json for all requests', async () => {
+    it('should set application/json only for requests with a body', async () => {
       const mockFetch = setupMockFetch({ body: {} });
 
       await client.get('test');
@@ -284,10 +286,129 @@ describe('SciXAPIClient', () => {
       await client.put('test', {});
       await client.delete('test');
 
-      for (let i = 0; i < 4; i++) {
-        const [, init] = mockFetch.mock.calls[i];
-        expect(init.headers['Content-Type']).toBe('application/json');
-      }
+      const [, getInit] = mockFetch.mock.calls[0];
+      const [, postInit] = mockFetch.mock.calls[1];
+      const [, putInit] = mockFetch.mock.calls[2];
+      const [, deleteInit] = mockFetch.mock.calls[3];
+
+      expect(getInit.headers['Content-Type']).toBeUndefined();
+      expect(postInit.headers['Content-Type']).toBe('application/json');
+      expect(putInit.headers['Content-Type']).toBe('application/json');
+      expect(deleteInit.headers['Content-Type']).toBeUndefined();
+    });
+  });
+
+  describe('timeout message', () => {
+    it('should derive the timeout message from REQUEST_TIMEOUT', async () => {
+      global.fetch = createTimeoutFetch(50) as any;
+
+      const error = await client.get('test').catch((e) => e);
+
+      expect(error.message).toContain(`after ${REQUEST_TIMEOUT / 1000} seconds`);
+    });
+  });
+
+  describe('rate limit reset', () => {
+    it('should include the reset time from X-RateLimit-Reset on a 429', async () => {
+      // 1735689600 = 2025-01-01T00:00:00.000Z (unix seconds)
+      setupMockFetch({
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: { 'X-RateLimit-Reset': '1735689600' }
+      });
+
+      const error = await client.get('search/query').catch((e) => e);
+
+      expect(error.message).toContain('Rate limit exceeded');
+      expect(error.message).toContain('2025-01-01T00:00:00.000Z');
+    });
+
+    it('should omit reset time and not crash when the header is absent', async () => {
+      setupMockFetch({ status: 429, statusText: 'Too Many Requests' });
+
+      const error = await client.get('search/query').catch((e) => e);
+
+      expect(error.message).toContain('Rate limit exceeded');
+      expect(error.message).not.toContain('Invalid Date');
+    });
+  });
+
+  describe('empty response bodies', () => {
+    it('should return {} for an empty 204 body on every verb', async () => {
+      setupMockFetch({ status: 204, statusText: 'No Content', emptyBody: true });
+
+      await expect(client.get('test')).resolves.toEqual({});
+      await expect(client.post('test', {})).resolves.toEqual({});
+      await expect(client.put('test', {})).resolves.toEqual({});
+      await expect(client.delete('test')).resolves.toEqual({});
+    });
+  });
+
+  describe('error messages', () => {
+    it('should include method and endpoint context in the error message', async () => {
+      setupMockFetch({ status: 500, statusText: 'Internal Server Error' });
+
+      const error = await client.get('biblib/libraries/lib1').catch((e) => e);
+
+      expect(error.message).toContain('GET');
+      expect(error.message).toContain('biblib/libraries/lib1');
+    });
+
+    it('should not include the misleading bibcode hint on a 404', async () => {
+      setupMockFetch({ status: 404, statusText: 'Not Found' });
+
+      const error = await client.get('biblib/libraries/missing').catch((e) => e);
+
+      expect(error.message).toContain('Resource not found');
+      expect(error.message).not.toContain('bibcode');
+      expect(error.message).not.toMatch(/search query/i);
+    });
+
+    it('should keep the token-setup hint on a 401', async () => {
+      setupMockFetch({ status: 401, statusText: 'Unauthorized' });
+
+      const error = await client.post('biblib/libraries', {}).catch((e) => e);
+
+      expect(error.message).toContain('Authentication failed');
+      expect(error.message).toContain('SCIX_API_TOKEN');
+      expect(error.message).toContain('scixplorer.org/user/settings/token');
+    });
+  });
+
+  describe('SciXAPIError', () => {
+    it('should throw a typed error carrying status and the ADS error-body message', async () => {
+      setupMockFetch({
+        status: 400,
+        statusText: 'Bad Request',
+        body: { error: 'Malformed query near "foo"' }
+      });
+
+      const error = await client.get('search/query').catch((e) => e);
+
+      expect(error).toBeInstanceOf(SciXAPIError);
+      expect(error.status).toBe(400);
+      expect(error.message).toContain('Malformed query near "foo"');
+    });
+
+    it('should still throw a typed error when the error body is not JSON', async () => {
+      const mockFetch = setupMockFetch({ status: 502, statusText: 'Bad Gateway' });
+      // Simulate an upstream HTML/plain-text error page (not valid JSON)
+      mockFetch.mockImplementation(async () => ({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+        headers: new Map([['content-type', 'text/html']]),
+        text: async () => '<html><body>502 Bad Gateway</body></html>',
+        json: async () => {
+          throw new Error('not json');
+        }
+      } as any));
+
+      const error = await client.get('test').catch((e) => e);
+
+      expect(error).toBeInstanceOf(SciXAPIError);
+      expect(error.status).toBe(502);
+      expect(error.message).toContain('SciX API error: 502');
     });
   });
 });

@@ -9,6 +9,7 @@ export interface MockFetchOptions {
   headers?: Record<string, string>;
   delay?: number;
   shouldAbort?: boolean;
+  emptyBody?: boolean;
 }
 
 /**
@@ -21,7 +22,8 @@ export function createMockFetch(options: MockFetchOptions = {}) {
     body = {},
     headers = {},
     delay = 0,
-    shouldAbort = false
+    shouldAbort = false,
+    emptyBody = false
   } = options;
 
   return vi.fn(async (url: string, init?: RequestInit) => {
@@ -55,7 +57,7 @@ export function createMockFetch(options: MockFetchOptions = {}) {
         ...headers
       })),
       json: async () => body,
-      text: async () => JSON.stringify(body),
+      text: async () => (emptyBody ? '' : JSON.stringify(body)),
       blob: async () => new Blob([JSON.stringify(body)]),
       arrayBuffer: async () => new ArrayBuffer(0),
       formData: async () => new FormData(),
