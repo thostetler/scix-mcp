@@ -22,7 +22,8 @@ export const SearchInputSchema = z.object({
 });
 
 export const GetPaperInputSchema = z.object({
-  bibcode: z.string().min(1).max(19).describe('SciX bibcode identifier'),
+  bibcode: z.string().min(1).max(200)
+    .describe('Paper identifier: bibcode, DOI, arXiv ID, or SciX ID (scix:...)'),
   response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
@@ -32,7 +33,8 @@ export const MetricsInputSchema = z.object({
 });
 
 export const CitationsInputSchema = z.object({
-  bibcode: z.string().min(1).max(19).describe('SciX bibcode identifier'),
+  bibcode: z.string().min(1).max(200)
+    .describe('Paper identifier: bibcode, DOI, arXiv ID, or SciX ID (scix:...)'),
   rows: z.number().int().min(1).max(100).default(20).describe('Number of citations to return'),
   response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });

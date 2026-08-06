@@ -17,7 +17,6 @@ export const DEFAULT_FIELDS = [
   'citation_count',
   'read_count',
   'doi',
-  'arxiv_id',
   'pub',
   'volume',
   'page',

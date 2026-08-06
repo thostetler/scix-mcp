@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   SearchInputSchema,
+  GetPaperInputSchema,
   MetricsInputSchema,
   CitationsInputSchema,
   ExportInputSchema,
@@ -39,6 +40,35 @@ describe('input schemas', () => {
       expect(
         CitationsInputSchema.safeParse({ bibcode: '2024ApJ...1..1A', rows: 101 }).success
       ).toBe(false);
+    });
+  });
+
+  describe('identifier input length and descriptions', () => {
+    const doi = '10.1103/PhysRevLett.116.061102';
+
+    it('accepts DOI-length ids that exceeded the old 19-char cap', () => {
+      expect(doi.length).toBeGreaterThan(19);
+      expect(GetPaperInputSchema.safeParse({ bibcode: doi }).success).toBe(true);
+      expect(CitationsInputSchema.safeParse({ bibcode: doi }).success).toBe(true);
+    });
+
+    it('still enforces a sane upper bound around 200 chars', () => {
+      const tooLong = 'a'.repeat(201);
+      const atLimit = 'a'.repeat(200);
+      expect(GetPaperInputSchema.safeParse({ bibcode: tooLong }).success).toBe(false);
+      expect(GetPaperInputSchema.safeParse({ bibcode: atLimit }).success).toBe(true);
+      expect(CitationsInputSchema.safeParse({ bibcode: tooLong }).success).toBe(false);
+      expect(CitationsInputSchema.safeParse({ bibcode: atLimit }).success).toBe(true);
+    });
+
+    it('describes the accepted id types on both schemas', () => {
+      for (const schema of [GetPaperInputSchema, CitationsInputSchema]) {
+        const desc = schema.shape.bibcode.description ?? '';
+        expect(desc).toMatch(/bibcode/i);
+        expect(desc).toMatch(/DOI/i);
+        expect(desc).toMatch(/arxiv/i);
+        expect(desc).toMatch(/scix/i);
+      }
     });
   });
 

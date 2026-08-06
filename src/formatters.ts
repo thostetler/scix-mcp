@@ -22,8 +22,17 @@ export function formatPaperMarkdown(paper: any): string {
     result += `**DOI:** https://doi.org/${paper.doi[0]}\n\n`;
   }
 
-  if (paper.arxiv_id) {
-    result += `**arXiv:** https://arxiv.org/abs/${paper.arxiv_id}\n\n`;
+  const identifiers = Array.isArray(paper.identifier)
+    ? paper.identifier
+    : typeof paper.identifier === 'string'
+    ? [paper.identifier]
+    : [];
+  const arxivEntry = identifiers.find(
+    (id: unknown) => typeof id === 'string' && id.toLowerCase().startsWith('arxiv:')
+  );
+
+  if (arxivEntry) {
+    result += `**arXiv:** https://arxiv.org/abs/${arxivEntry.slice(6)}\n\n`;
   }
 
   if (paper.abstract) {

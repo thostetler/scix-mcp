@@ -17,7 +17,7 @@ describe('formatters', () => {
       citation_count: 100,
       read_count: 500,
       doi: ['10.1234/test.doi'],
-      arxiv_id: '2401.12345',
+      identifier: ['2024ApJ...123..456A', 'arXiv:2401.12345', '10.1234/test.doi'],
       abstract: 'We study black holes.',
     };
 
@@ -64,6 +64,57 @@ describe('formatters', () => {
       expect(md).not.toContain('**DOI:**');
       expect(md).not.toContain('**arXiv:**');
       expect(md).not.toContain('## Abstract');
+    });
+
+    it('derives the arXiv link from an arXiv-prefixed identifier entry', () => {
+      const md = formatPaperMarkdown({
+        bibcode: 'x',
+        title: ['T'],
+        identifier: ['2024ApJ...123..456A', 'arXiv:2401.12345', '10.1234/test.doi'],
+      });
+      expect(md).toContain('**arXiv:** https://arxiv.org/abs/2401.12345');
+    });
+
+    it('omits the arXiv line when no identifier entry has an arXiv prefix', () => {
+      const md = formatPaperMarkdown({
+        bibcode: 'x',
+        title: ['T'],
+        identifier: ['2024ApJ...123..456A', '10.1234/test.doi'],
+      });
+      expect(md).not.toContain('**arXiv:**');
+    });
+
+    it('matches the arXiv prefix case-insensitively, preserving the id body', () => {
+      const md = formatPaperMarkdown({
+        bibcode: 'x',
+        title: ['T'],
+        identifier: ['2024ApJ...123..456A', 'arxiv:2401.12345'],
+      });
+      expect(md).toContain('**arXiv:** https://arxiv.org/abs/2401.12345');
+    });
+
+    it('does not throw when identifier is a bare string instead of an array', () => {
+      expect(() =>
+        formatPaperMarkdown({ bibcode: 'x', title: ['T'], identifier: '2024ApJ...123..456A' })
+      ).not.toThrow();
+    });
+
+    it('derives the arXiv link from a bare arXiv-prefixed identifier string', () => {
+      const md = formatPaperMarkdown({
+        bibcode: 'x',
+        title: ['T'],
+        identifier: 'arXiv:2401.12345',
+      });
+      expect(md).toContain('**arXiv:** https://arxiv.org/abs/2401.12345');
+    });
+
+    it('ignores non-string identifier entries without throwing', () => {
+      const md = formatPaperMarkdown({
+        bibcode: 'x',
+        title: ['T'],
+        identifier: [null, 42, 'arXiv:2401.12345'],
+      });
+      expect(md).toContain('**arXiv:** https://arxiv.org/abs/2401.12345');
     });
   });
 

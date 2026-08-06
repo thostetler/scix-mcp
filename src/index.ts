@@ -109,7 +109,7 @@ export function createServer(): McpServer {
   server.registerTool(
     'get_paper',
     {
-      description: 'Get detailed information about a specific paper by its SciX bibcode (e.g., 2019ApJ...886..145M).',
+      description: 'Get detailed information about a specific paper by identifier: bibcode, DOI, arXiv ID, or SciX ID (scix:...).',
       inputSchema: GetPaperInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -155,7 +155,7 @@ export function createServer(): McpServer {
   server.registerTool(
     'get_citations',
     {
-      description: 'Get papers that cite a given paper (forward citations).',
+      description: 'Get papers that cite a given paper (forward citations). Accepts a bibcode, DOI, arXiv ID, or SciX ID.',
       inputSchema: CitationsInputSchema,
       annotations: {
         readOnlyHint: true,
@@ -178,7 +178,7 @@ export function createServer(): McpServer {
   server.registerTool(
     'get_references',
     {
-      description: 'Get papers referenced by a given paper (backward citations).',
+      description: 'Get papers referenced by a given paper (backward citations). Accepts a bibcode, DOI, arXiv ID, or SciX ID.',
       inputSchema: CitationsInputSchema,
       annotations: {
         readOnlyHint: true,

@@ -2,10 +2,11 @@ import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
 import { GetPaperInput, ResponseFormat } from '../types.js';
 import { formatPaperMarkdown } from '../formatters.js';
+import { buildIdentifierQuery } from '../identifier-query.js';
 
 export async function getPaper(client: SciXAPIClient, input: GetPaperInput): Promise<string> {
   const params = {
-    q: `identifier:${input.bibcode}`,
+    q: buildIdentifierQuery(input.bibcode),
     fl: DEFAULT_FIELDS,
     rows: 1
   };
