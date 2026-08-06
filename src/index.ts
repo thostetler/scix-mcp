@@ -4,6 +4,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
+  CallToolResult,
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
@@ -11,8 +12,9 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { readFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { SciXAPIClient } from './client.js';
 import { search } from './tools/search.js';
 import { getPaper } from './tools/paper.js';
@@ -823,10 +825,54 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   };
 });
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+export const HANDLED_TOOL_NAMES: string[] = [
+  'search', 'get_paper', 'get_metrics', 'get_citations', 'get_references',
+  'export', 'get_libraries', 'get_library', 'create_library', 'delete_library',
+  'edit_library', 'manage_documents', 'add_documents_by_query', 'library_operation',
+  'get_permissions', 'update_permissions', 'transfer_library', 'get_annotation',
+  'manage_annotation', 'delete_annotation', 'search_docs',
+];
+
+export async function handleToolCall(request: {
+  params: { name: string; arguments?: unknown };
+}): Promise<CallToolResult> {
   const { name, arguments: args } = request.params;
 
   try {
+    if (name === 'search_docs') {
+      const input = SearchDocsInputSchema.parse(args);
+      const results = await searchDocs(input.query, input.limit);
+
+      if (results.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'No documentation found for your query.' }],
+        };
+      }
+
+      const formatted = results.map((r, i) => {
+        let text = `## ${i + 1}. ${r.title}\n`;
+        if (r.subsection) {
+          text += `**Section**: ${r.section} > ${r.subsection}\n`;
+        } else if (r.section) {
+          text += `**Section**: ${r.section}\n`;
+        }
+        text += `**Source**: ${r.source_file} ([view online](${r.source_url}))\n`;
+        text += `**Relevance**: ${r.score.toFixed(1)}\n\n`;
+        text += `${r.snippet}\n`;
+        return text;
+      }).join('\n---\n\n');
+
+      const header = `# SciX Documentation Search Results\n\nFound ${results.length} result${results.length === 1 ? '' : 's'} for "${input.query}":\n\n`;
+
+      return {
+        content: [{ type: 'text', text: header + formatted }],
+      };
+    }
+
+    if (!HANDLED_TOOL_NAMES.includes(name)) {
+      throw new Error(`Unknown tool: ${name}`);
+    }
+
     const client = getClient();
 
     switch (name) {
@@ -990,36 +1036,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'search_docs': {
-        const input = SearchDocsInputSchema.parse(args);
-        const results = await searchDocs(input.query, input.limit);
-
-        if (results.length === 0) {
-          return {
-            content: [{ type: 'text', text: 'No documentation found for your query.' }],
-          };
-        }
-
-        const formatted = results.map((r, i) => {
-          let text = `## ${i + 1}. ${r.title}\n`;
-          if (r.subsection) {
-            text += `**Section**: ${r.section} > ${r.subsection}\n`;
-          } else if (r.section) {
-            text += `**Section**: ${r.section}\n`;
-          }
-          text += `**Source**: ${r.source_file} ([view online](${r.source_url}))\n`;
-          text += `**Relevance**: ${r.score.toFixed(1)}\n\n`;
-          text += `${r.snippet}\n`;
-          return text;
-        }).join('\n---\n\n');
-
-        const header = `# SciX Documentation Search Results\n\nFound ${results.length} result${results.length === 1 ? '' : 's'} for "${input.query}":\n\n`;
-
-        return {
-          content: [{ type: 'text', text: header + formatted }],
-        };
-      }
-
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -1034,7 +1050,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       isError: true,
     };
   }
-});
+}
+
+server.setRequestHandler(CallToolRequestSchema, handleToolCall);
 
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
   return {
@@ -1937,7 +1955,14 @@ async function main() {
   console.error('SciX MCP Server running on stdio');
 }
 
-main().catch((error) => {
-  console.error('Server error:', error);
-  process.exit(1);
-});
+const entryPath = process.argv[1];
+const isDirectRun =
+  entryPath !== undefined &&
+  import.meta.url === pathToFileURL(realpathSync(entryPath)).href;
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error('Server error:', error);
+    process.exit(1);
+  });
+}
