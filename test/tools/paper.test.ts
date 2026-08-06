@@ -56,7 +56,7 @@ describe('Paper Tool', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('search/query');
-      expect(url).toContain('q=bibcode%3A2024ApJ...123..456A');
+      expect(url).toContain('q=identifier%3A2024ApJ...123..456A');
       expect(url).toContain('rows=1');
 
       expect(result).toContain('Black Holes');
@@ -78,7 +78,7 @@ describe('Paper Tool', () => {
           bibcode: 'nonexistent',
           response_format: ResponseFormat.MARKDOWN
         })
-      ).rejects.toThrow('Paper with bibcode nonexistent not found');
+      ).rejects.toThrow('Paper with identifier nonexistent not found');
     });
 
     it('should return JSON format', async () => {
