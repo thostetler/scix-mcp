@@ -77,7 +77,16 @@ const server = new Server(
   }
 );
 
-const client = new SciXAPIClient();
+// Construct the API client lazily so a missing/invalid SCIX_API_TOKEN
+// surfaces as a graceful tool error rather than an import-time crash.
+let client: SciXAPIClient | undefined;
+
+function getClient(): SciXAPIClient {
+  if (!client) {
+    client = new SciXAPIClient();
+  }
+  return client;
+}
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -818,6 +827,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
+    const client = getClient();
+
     switch (name) {
       case 'search': {
         const input = SearchInputSchema.parse(args);
