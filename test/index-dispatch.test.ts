@@ -1,8 +1,62 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { handleToolCall, TOOL_DEFINITIONS, HANDLED_TOOL_NAMES } from '../src/index.js';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createServer } from '../src/index.js';
 import { setupMockFetch, restoreFetch } from './helpers/mockFetch.js';
 
-describe('index CallTool dispatch', () => {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const usageGuidePath = path.join(__dirname, '..', 'USAGE_GUIDE.md');
+
+// All tools the server is expected to advertise and dispatch through the
+// MCP protocol. Parity is exercised end-to-end via an in-memory client.
+const EXPECTED_TOOL_NAMES = [
+  'search',
+  'get_paper',
+  'get_metrics',
+  'get_citations',
+  'get_references',
+  'export',
+  'get_libraries',
+  'get_library',
+  'create_library',
+  'delete_library',
+  'edit_library',
+  'manage_documents',
+  'add_documents_by_query',
+  'library_operation',
+  'get_permissions',
+  'update_permissions',
+  'transfer_library',
+  'get_annotation',
+  'manage_annotation',
+  'delete_annotation',
+  'search_docs',
+];
+
+const EXPECTED_PROMPT_NAMES = [
+  'search-workflow',
+  'library-management',
+  'citation-analysis',
+  'export-bibliography',
+  'best-practices',
+];
+
+async function connectClient() {
+  const server = createServer();
+  const client = new Client({ name: 'test-client', version: '1.0' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([client.connect(clientTransport), server.server.connect(serverTransport)]);
+  return { client, server };
+}
+
+function callText(result: { content: Array<{ text?: string }> }): string {
+  return result.content.map((c) => c.text ?? '').join('\n');
+}
+
+describe('index server (McpServer over InMemoryTransport)', () => {
   const originalToken = process.env.SCIX_API_TOKEN;
 
   afterEach(() => {
@@ -11,111 +65,139 @@ describe('index CallTool dispatch', () => {
     } else {
       process.env.SCIX_API_TOKEN = originalToken;
     }
+    restoreFetch();
   });
 
-  describe('tool list vs dispatch parity', () => {
-    beforeEach(() => {
-      process.env.SCIX_API_TOKEN = 'test-api-key';
-      // Some tools (e.g. get_libraries) have fully-defaulted schemas, so empty
-      // args parse and reach the network — mock fetch so parity stays offline.
-      setupMockFetch({ status: 401, statusText: 'Unauthorized', body: {} });
+  describe('tools/list parity', () => {
+    it('advertises exactly the expected set of tools through tools/list', async () => {
+      const { client } = await connectClient();
+      const { tools } = await client.listTools();
+      const names = tools.map((t) => t.name).sort();
+      expect(names).toEqual([...EXPECTED_TOOL_NAMES].sort());
     });
 
-    afterEach(() => {
-      restoreFetch();
-    });
-
-    it('advertises a non-empty list of tools with names', () => {
-      expect(TOOL_DEFINITIONS.length).toBeGreaterThan(0);
-      for (const tool of TOOL_DEFINITIONS) {
-        expect(typeof tool.name).toBe('string');
-        expect(tool.name.length).toBeGreaterThan(0);
-      }
-    });
-
-    it('dispatches every advertised tool (none is an unknown tool)', async () => {
-      for (const tool of TOOL_DEFINITIONS) {
-        const res = await handleToolCall({
-          params: { name: tool.name, arguments: {} },
-        });
-        const text = res.content.map((c) => c.text).join('\n');
-        // Empty args may trip Zod validation, but the tool must still be
-        // recognized by the dispatcher — never reported as an unknown tool.
-        expect(text, `tool ${tool.name} should be dispatchable`).not.toContain(
-          'Unknown tool'
-        );
-      }
-    });
-
-    it('advertised tool set exactly matches the dispatchable set', () => {
-      const advertised = [...new Set(TOOL_DEFINITIONS.map((t) => t.name))].sort();
-      const dispatchable = [...new Set(HANDLED_TOOL_NAMES)].sort();
-      // Bidirectional: catches advertised-but-undispatchable AND
-      // dispatchable-but-unadvertised (the missing-ListTools-entry mistake).
-      expect(dispatchable).toEqual(advertised);
-    });
-
-    it('reports an unknown tool name as an error', async () => {
-      const res = await handleToolCall({
-        params: { name: 'does_not_exist', arguments: {} },
-      });
-      expect(res.isError).toBe(true);
-      const text = res.content.map((c) => c.text).join('\n');
-      expect(text).toContain('Unknown tool: does_not_exist');
+    it('preserves tool annotations (e.g. delete_library is destructive)', async () => {
+      const { client } = await connectClient();
+      const { tools } = await client.listTools();
+      const deleteLibrary = tools.find((t) => t.name === 'delete_library');
+      expect(deleteLibrary?.annotations?.destructiveHint).toBe(true);
+      const search = tools.find((t) => t.name === 'search');
+      expect(search?.annotations?.readOnlyHint).toBe(true);
     });
   });
 
-  describe('error handling', () => {
-    beforeEach(() => {
+  describe('unknown tool', () => {
+    it('surfaces an unknown tool name as an error result', async () => {
       process.env.SCIX_API_TOKEN = 'test-api-key';
+      const { client } = await connectClient();
+      const result = await client.callTool({ name: 'does_not_exist', arguments: {} });
+      expect(result.isError).toBe(true);
+      expect(callText(result as { content: Array<{ text?: string }> })).toMatch(/not found/i);
     });
+  });
 
-    afterEach(() => {
-      restoreFetch();
-    });
-
-    it('surfaces API client errors as isError results with the mapped message', async () => {
+  describe('API error surfacing', () => {
+    it('surfaces a mapped API error as isError with the Error: prefix', async () => {
+      process.env.SCIX_API_TOKEN = 'test-api-key';
       setupMockFetch({ status: 401, statusText: 'Unauthorized', body: {} });
-
-      const res = await handleToolCall({
-        params: {
-          name: 'get_paper',
-          arguments: { bibcode: '2024ApJ...123..456A' },
-        },
+      const { client } = await connectClient();
+      const result = await client.callTool({
+        name: 'get_paper',
+        arguments: { bibcode: '2024ApJ...123..456A' },
       });
-
-      expect(res.isError).toBe(true);
-      const text = res.content.map((c) => c.text).join('\n');
+      expect(result.isError).toBe(true);
+      const text = callText(result as { content: Array<{ text?: string }> });
       expect(text).toContain('Error:');
       expect(text).toContain('Authentication failed');
     });
   });
 
-  describe('token independence', () => {
-    beforeEach(() => {
+  describe('missing SCIX_API_TOKEN', () => {
+    it('does not throw at server construction when the token is unset', () => {
       delete process.env.SCIX_API_TOKEN;
+      expect(() => createServer()).not.toThrow();
     });
 
-    it('runs search_docs without SCIX_API_TOKEN (fully local tool)', async () => {
-      const res = await handleToolCall({
-        params: { name: 'search_docs', arguments: { query: 'author search', limit: 3 } },
+    it('surfaces a missing token as a graceful tool error, not a crash', async () => {
+      delete process.env.SCIX_API_TOKEN;
+      const { client } = await connectClient();
+      const result = await client.callTool({
+        name: 'search',
+        arguments: { query: 'black holes' },
       });
-
-      expect(res.isError).toBeFalsy();
-      const text = res.content.map((c) => c.text).join('\n');
-      expect(text).toContain('SciX Documentation Search Results');
-      expect(text).not.toContain('SCIX_API_TOKEN');
+      expect(result.isError).toBe(true);
+      expect(callText(result as { content: Array<{ text?: string }> })).toContain('SCIX_API_TOKEN');
     });
 
-    it('reports an unknown tool as "Unknown tool", not a token error, when unset', async () => {
-      const res = await handleToolCall({
-        params: { name: 'does_not_exist', arguments: {} },
+    it('runs the local search_docs tool without a token', async () => {
+      delete process.env.SCIX_API_TOKEN;
+      const { client } = await connectClient();
+      const result = await client.callTool({
+        name: 'search_docs',
+        arguments: { query: 'author search', limit: 3 },
       });
+      expect(result.isError).toBeFalsy();
+      expect(callText(result as { content: Array<{ text?: string }> })).toContain(
+        'SciX Documentation Search Results'
+      );
+    });
+  });
 
-      expect(res.isError).toBe(true);
-      const text = res.content.map((c) => c.text).join('\n');
-      expect(text).toContain('Unknown tool: does_not_exist');
-      expect(text).not.toContain('SCIX_API_TOKEN');
+  describe('export custom_format refinement', () => {
+    it('rejects format=custom without custom_format through validation', async () => {
+      process.env.SCIX_API_TOKEN = 'test-api-key';
+      const { client } = await connectClient();
+      const result = await client.callTool({
+        name: 'export',
+        arguments: { bibcodes: ['2024ApJ...123..456A'], format: 'custom' },
+      });
+      expect(result.isError).toBe(true);
+      expect(callText(result as { content: Array<{ text?: string }> })).toContain('custom_format');
+    });
+  });
+
+  describe('prompts', () => {
+    it('lists all five prompts with descriptions', async () => {
+      const { client } = await connectClient();
+      const { prompts } = await client.listPrompts();
+      const names = prompts.map((p) => p.name).sort();
+      expect(names).toEqual([...EXPECTED_PROMPT_NAMES].sort());
+      for (const prompt of prompts) {
+        expect(typeof prompt.description).toBe('string');
+        expect((prompt.description ?? '').length).toBeGreaterThan(0);
+      }
+    });
+
+    it('serves prompt bodies verbatim through prompts/get', async () => {
+      const { client } = await connectClient();
+      const search = await client.getPrompt({ name: 'search-workflow' });
+      const text = search.messages.map((m) => (m.content as { text?: string }).text ?? '').join('');
+      expect(text).toContain('# SciX Literature Search Guide');
+      expect(text).toContain('read_count desc');
+
+      const exportPrompt = await client.getPrompt({ name: 'export-bibliography' });
+      const exportText = exportPrompt.messages
+        .map((m) => (m.content as { text?: string }).text ?? '')
+        .join('');
+      expect(exportText).toContain('# SciX Bibliography Export Guide');
+    });
+  });
+
+  describe('usage-guide resource', () => {
+    it('lists the scix://usage-guide resource', async () => {
+      const { client } = await connectClient();
+      const { resources } = await client.listResources();
+      const guide = resources.find((r) => r.uri === 'scix://usage-guide');
+      expect(guide).toBeDefined();
+      expect(guide?.mimeType).toBe('text/markdown');
+    });
+
+    it('serves the usage guide byte-identical to USAGE_GUIDE.md', async () => {
+      const { client } = await connectClient();
+      const result = await client.readResource({ uri: 'scix://usage-guide' });
+      const served = (result.contents[0] as { text?: string }).text ?? '';
+      const onDisk = await readFile(usageGuidePath, 'utf-8');
+      expect(served).toBe(onDisk);
     });
   });
 });

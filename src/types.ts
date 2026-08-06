@@ -17,24 +17,24 @@ export const SearchInputSchema = z.object({
   query: z.string().min(1).max(1000).describe('SciX search query using Solr syntax'),
   rows: z.number().int().min(1).max(100).default(10).describe('Number of results to return'),
   start: z.number().int().min(0).default(0).describe('Starting offset for pagination'),
-  sort: z.nativeEnum(SortOrder).default(SortOrder.RELEVANCE).describe('Sort order for results'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN).describe('Output format')
+  sort: z.enum(SortOrder).default(SortOrder.RELEVANCE).describe('Sort order for results'),
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN).describe('Output format')
 });
 
 export const GetPaperInputSchema = z.object({
   bibcode: z.string().min(1).max(19).describe('SciX bibcode identifier'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 export const MetricsInputSchema = z.object({
   bibcodes: z.array(z.string()).min(1).max(2000).describe('List of bibcodes'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 export const CitationsInputSchema = z.object({
   bibcode: z.string().min(1).max(19).describe('SciX bibcode identifier'),
   rows: z.number().int().min(1).max(100).default(20).describe('Number of citations to return'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 export const ExportInputSchema = z.object({
@@ -110,14 +110,14 @@ export enum DocumentAction {
 
 // Get Libraries
 export const GetLibrariesInputSchema = z.object({
-  type: z.nativeEnum(LibraryType).default(LibraryType.ALL).describe('Filter by library type'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  type: z.enum(LibraryType).default(LibraryType.ALL).describe('Filter by library type'),
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Get Library
 export const GetLibraryInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Create Library
@@ -126,13 +126,13 @@ export const CreateLibraryInputSchema = z.object({
   description: z.string().max(1000).optional().describe('Library description'),
   public: z.boolean().default(false).describe('Whether library is public'),
   bibcodes: z.array(z.string()).optional().describe('Initial bibcodes to add'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Delete Library
 export const DeleteLibraryInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Edit Library Metadata
@@ -141,15 +141,15 @@ export const EditLibraryInputSchema = z.object({
   name: z.string().min(1).max(255).optional().describe('New library name'),
   description: z.string().max(1000).optional().describe('New library description'),
   public: z.boolean().optional().describe('Whether library is public'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Add/Remove Documents
 export const ManageDocumentsInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
   bibcodes: z.array(z.string()).min(1).max(2000).describe('List of bibcodes'),
-  action: z.nativeEnum(DocumentAction).describe('Action to perform (add or remove)'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  action: z.enum(DocumentAction).describe('Action to perform (add or remove)'),
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Add Documents by Query
@@ -157,45 +157,45 @@ export const AddDocumentsByQueryInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
   query: z.string().min(1).describe('SciX search query'),
   rows: z.number().int().min(1).max(2000).default(25).describe('Number of results to add'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Library Operation
 export const LibraryOperationInputSchema = z.object({
   library_id: z.string().min(1).describe('Target library identifier'),
-  operation: z.nativeEnum(LibraryOperation).describe('Operation to perform'),
+  operation: z.enum(LibraryOperation).describe('Operation to perform'),
   source_library_ids: z.array(z.string()).optional().describe('Source library IDs for union/intersection/difference'),
   name: z.string().optional().describe('Name for new library (for copy operation)'),
   description: z.string().optional().describe('Description for new library (for copy operation)'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Get Permissions
 export const GetPermissionsInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Update Permissions
 export const UpdatePermissionsInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
   email: z.string().email().describe('User email to grant/modify permissions'),
-  permission: z.nativeEnum(LibraryPermission).describe('Permission level to grant'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  permission: z.enum(LibraryPermission).describe('Permission level to grant'),
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Transfer Library
 export const TransferLibraryInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
   email: z.string().email().describe('Email of new owner'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Get Annotation
 export const GetAnnotationInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
   bibcode: z.string().min(1).describe('Bibcode to get annotation for'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Add/Update Annotation
@@ -203,14 +203,14 @@ export const ManageAnnotationInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
   bibcode: z.string().min(1).describe('Bibcode to annotate'),
   content: z.string().min(1).max(10000).describe('Annotation content'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 // Delete Annotation
 export const DeleteAnnotationInputSchema = z.object({
   library_id: z.string().min(1).describe('Library identifier'),
   bibcode: z.string().min(1).describe('Bibcode to remove annotation from'),
-  response_format: z.nativeEnum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
 });
 
 export type GetLibrariesInput = z.infer<typeof GetLibrariesInputSchema>;
