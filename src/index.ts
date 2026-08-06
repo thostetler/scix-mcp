@@ -1,16 +1,8 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  CallToolResult,
-  ListToolsRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-  ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { readFile } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
@@ -65,1034 +57,546 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const usageGuidePath = path.join(__dirname, '..', 'USAGE_GUIDE.md');
 
-const server = new Server(
-  {
+function textResult(text: string): CallToolResult {
+  return { content: [{ type: 'text', text }] };
+}
+
+function errorResult(error: unknown): CallToolResult {
+  const message = error instanceof Error ? error.message : String(error);
+  return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
+}
+
+export function createServer(): McpServer {
+  const server = new McpServer({
     name: 'scix-mcp',
     version: '1.0.15',
-  },
-  {
-    capabilities: {
-      tools: {},
-      prompts: {},
-      resources: {},
-    },
-  }
-);
+  });
 
-// Construct the API client lazily so a missing/invalid SCIX_API_TOKEN
-// surfaces as a graceful tool error rather than an import-time crash.
-let cachedClient: SciXAPIClient | undefined;
+  // Construct the API client lazily so a missing/invalid SCIX_API_TOKEN
+  // surfaces as a graceful tool error rather than an import-time crash.
+  let cachedClient: SciXAPIClient | undefined;
 
-function getClient(): SciXAPIClient {
-  if (!cachedClient) {
-    cachedClient = new SciXAPIClient();
-  }
-  return cachedClient;
-}
-
-export const TOOL_DEFINITIONS = [
-  {
-    name: 'search',
-    description: 'Search SciX for astronomical literature. Supports full Solr query syntax including author:"Last, F.", title:keyword, abstract:keyword, year:2020-2023, and Boolean operators (AND, OR, NOT).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Search query using SciX/Solr syntax',
-        },
-        rows: {
-          type: 'number',
-          description: 'Number of results (1-100, default 10)',
-          default: 10,
-        },
-        start: {
-          type: 'number',
-          description: 'Starting offset for pagination (default 0)',
-          default: 0,
-        },
-        sort: {
-          type: 'string',
-          enum: ['score desc', 'citation_count desc', 'date desc', 'date asc', 'read_count desc'],
-          description: 'Sort order',
-          default: 'score desc',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          description: 'Output format',
-          default: 'markdown',
-        },
-      },
-      required: ['query'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_paper',
-    description: 'Get detailed information about a specific paper by its SciX bibcode (e.g., 2019ApJ...886..145M).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        bibcode: {
-          type: 'string',
-          description: 'SciX bibcode identifier',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['bibcode'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_metrics',
-    description: 'Get citation metrics including h-index, citation counts, and paper statistics for a list of bibcodes.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        bibcodes: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'List of SciX bibcodes (1-2000)',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['bibcodes'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_citations',
-    description: 'Get papers that cite a given paper (forward citations).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        bibcode: {
-          type: 'string',
-          description: 'SciX bibcode identifier',
-        },
-        rows: {
-          type: 'number',
-          description: 'Number of citations to return (1-100, default 20)',
-          default: 20,
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['bibcode'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_references',
-    description: 'Get papers referenced by a given paper (backward citations).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        bibcode: {
-          type: 'string',
-          description: 'SciX bibcode identifier',
-        },
-        rows: {
-          type: 'number',
-          description: 'Number of references to return (1-100, default 20)',
-          default: 20,
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['bibcode'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'export',
-    description: 'Export citations in 25+ academic formats (BibTeX, AASTeX, EndNote, IEEE, MNRAS, etc.) with support for custom formatting templates.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        bibcodes: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'List of SciX bibcodes to export (1-2000)',
-        },
-        format: {
-          type: 'string',
-          enum: [
-            'aastex',
-            'ads',
-            'agu',
-            'ams',
-            'bibtex',
-            'bibtexabs',
-            'custom',
-            'dcxml',
-            'endnote',
-            'gsa',
-            'icarus',
-            'ieee',
-            'jatsxml',
-            'medlars',
-            'mnras',
-            'procite',
-            'refabsxml',
-            'refworks',
-            'refxml',
-            'ris',
-            'rss',
-            'soph',
-            'votable'
-          ],
-          description: 'Export format',
-        },
-        custom_format: {
-          type: 'string',
-          description: 'Custom format string using field specifiers (required when format is custom)',
-        },
-        sort: {
-          type: 'string',
-          description: 'Sort order for bibcodes (e.g., "date desc", "first_author asc")',
-        },
-        maxauthor: {
-          type: 'number',
-          description: 'Maximum number of authors to display (default: 200)',
-        },
-        authorcutoff: {
-          type: 'number',
-          description: 'Number of authors before using "et al."',
-        },
-        journalformat: {
-          type: 'number',
-          description: 'Journal name format: 1 (AASTeX macros), 2 (abbreviations), 3 (full names)',
-        },
-        keyformat: {
-          type: 'string',
-          description: 'BibTeX key format template (e.g., "%1H%Y" for FirstAuthorYear)',
-        },
-      },
-      required: ['bibcodes', 'format'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_libraries',
-    description: 'Get all libraries for the authenticated user. Can filter by type (all, owner, collaborator).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['all', 'owner', 'collaborator'],
-          description: 'Filter by library type',
-          default: 'all',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_library',
-    description: 'Get details about a specific library including metadata and list of documents.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'create_library',
-    description: 'Create a new library with optional initial documents.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        name: {
-          type: 'string',
-          description: 'Library name (1-255 characters)',
-        },
-        description: {
-          type: 'string',
-          description: 'Library description (optional)',
-        },
-        public: {
-          type: 'boolean',
-          description: 'Whether library is public',
-          default: false,
-        },
-        bibcodes: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Initial bibcodes to add (optional)',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['name'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'delete_library',
-    description: 'Delete a library permanently.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'edit_library',
-    description: 'Edit library metadata (name, description, public status).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        name: {
-          type: 'string',
-          description: 'New library name (optional)',
-        },
-        description: {
-          type: 'string',
-          description: 'New library description (optional)',
-        },
-        public: {
-          type: 'boolean',
-          description: 'Whether library is public (optional)',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'manage_documents',
-    description: 'Add or remove documents from a library.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        bibcodes: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'List of bibcodes (1-2000)',
-        },
-        action: {
-          type: 'string',
-          enum: ['add', 'remove'],
-          description: 'Action to perform',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'bibcodes', 'action'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'add_documents_by_query',
-    description: 'Add documents to a library from a SciX search query.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        query: {
-          type: 'string',
-          description: 'SciX search query',
-        },
-        rows: {
-          type: 'number',
-          description: 'Number of results to add (1-2000, default 25)',
-          default: 25,
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'query'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'library_operation',
-    description: 'Perform set operations on libraries (union, intersection, difference, copy, empty).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Target library identifier',
-        },
-        operation: {
-          type: 'string',
-          enum: ['union', 'intersection', 'difference', 'copy', 'empty'],
-          description: 'Operation to perform',
-        },
-        source_library_ids: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Source library IDs for set operations (optional)',
-        },
-        name: {
-          type: 'string',
-          description: 'Name for new library (for copy operation, optional)',
-        },
-        description: {
-          type: 'string',
-          description: 'Description for new library (for copy operation, optional)',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'operation'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_permissions',
-    description: 'Get permission information for a library.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'update_permissions',
-    description: 'Grant or modify permissions for a user on a library.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        email: {
-          type: 'string',
-          description: 'User email',
-        },
-        permission: {
-          type: 'string',
-          enum: ['owner', 'admin', 'write', 'read'],
-          description: 'Permission level to grant',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'email', 'permission'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'transfer_library',
-    description: 'Transfer ownership of a library to another user.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        email: {
-          type: 'string',
-          description: 'Email of new owner',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'email'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'get_annotation',
-    description: 'Get annotation/note for a document in a library.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        bibcode: {
-          type: 'string',
-          description: 'Bibcode to get annotation for',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'bibcode'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'manage_annotation',
-    description: 'Add or update an annotation/note for a document in a library.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        bibcode: {
-          type: 'string',
-          description: 'Bibcode to annotate',
-        },
-        content: {
-          type: 'string',
-          description: 'Annotation content (1-10000 characters)',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'bibcode', 'content'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'delete_annotation',
-    description: 'Delete an annotation/note for a document in a library.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        library_id: {
-          type: 'string',
-          description: 'Library identifier',
-        },
-        bibcode: {
-          type: 'string',
-          description: 'Bibcode to remove annotation from',
-        },
-        response_format: {
-          type: 'string',
-          enum: ['markdown', 'json'],
-          default: 'markdown',
-        },
-      },
-      required: ['library_id', 'bibcode'],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: 'search_docs',
-    description: 'Search SciX help documentation for information about search syntax, features, API usage, and best practices.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Natural language search query (e.g., "how to search by author", "export formats", "library permissions")',
-        },
-        limit: {
-          type: 'number',
-          description: 'Maximum number of results to return (1-20, default 5)',
-          default: 5,
-        },
-      },
-      required: ['query'],
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-    },
-  },
-];
-
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return { tools: TOOL_DEFINITIONS };
-});
-
-server.setRequestHandler(ListResourcesRequestSchema, async () => {
-  return {
-    resources: [
-      {
-        uri: 'scix://usage-guide',
-        name: 'SciX Usage Guide',
-        description: 'Comprehensive guide for using the SciX MCP server: search syntax, workflows, tools reference, and best practices.',
-        mimeType: 'text/markdown',
-      },
-    ],
-  };
-});
-
-server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  const { uri } = request.params;
-
-  if (uri !== 'scix://usage-guide') {
-    throw new Error(`Unknown resource: ${uri}`);
-  }
-
-  const content = await readFile(usageGuidePath, 'utf-8');
-
-  return {
-    contents: [
-      {
-        uri,
-        mimeType: 'text/markdown',
-        text: content,
-      },
-    ],
-  };
-});
-
-export const HANDLED_TOOL_NAMES: string[] = [
-  'search', 'get_paper', 'get_metrics', 'get_citations', 'get_references',
-  'export', 'get_libraries', 'get_library', 'create_library', 'delete_library',
-  'edit_library', 'manage_documents', 'add_documents_by_query', 'library_operation',
-  'get_permissions', 'update_permissions', 'transfer_library', 'get_annotation',
-  'manage_annotation', 'delete_annotation', 'search_docs',
-];
-
-export async function handleToolCall(request: {
-  params: { name: string; arguments?: unknown };
-}): Promise<CallToolResult> {
-  const { name, arguments: args } = request.params;
-
-  try {
-    if (name === 'search_docs') {
-      const input = SearchDocsInputSchema.parse(args);
-      const results = await searchDocs(input.query, input.limit);
-
-      if (results.length === 0) {
-        return {
-          content: [{ type: 'text', text: 'No documentation found for your query.' }],
-        };
-      }
-
-      const formatted = results.map((r, i) => {
-        let text = `## ${i + 1}. ${r.title}\n`;
-        if (r.subsection) {
-          text += `**Section**: ${r.section} > ${r.subsection}\n`;
-        } else if (r.section) {
-          text += `**Section**: ${r.section}\n`;
-        }
-        text += `**Source**: ${r.source_file} ([view online](${r.source_url}))\n`;
-        text += `**Relevance**: ${r.score.toFixed(1)}\n\n`;
-        text += `${r.snippet}\n`;
-        return text;
-      }).join('\n---\n\n');
-
-      const header = `# SciX Documentation Search Results\n\nFound ${results.length} result${results.length === 1 ? '' : 's'} for "${input.query}":\n\n`;
-
-      return {
-        content: [{ type: 'text', text: header + formatted }],
-      };
+  function getClient(): SciXAPIClient {
+    if (!cachedClient) {
+      cachedClient = new SciXAPIClient();
     }
+    return cachedClient;
+  }
 
-    if (!HANDLED_TOOL_NAMES.includes(name)) {
-      throw new Error(`Unknown tool: ${name}`);
-    }
-
-    const client = getClient();
-
-    switch (name) {
-      case 'search': {
-        const input = SearchInputSchema.parse(args);
+  server.registerTool(
+    'search',
+    {
+      description: 'Search SciX for astronomical literature. Supports full Solr query syntax including author:"Last, F.", title:keyword, abstract:keyword, year:2020-2023, and Boolean operators (AND, OR, NOT).',
+      inputSchema: SearchInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
         const result = await search(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
       }
-
-      case 'get_paper': {
-        const input = GetPaperInputSchema.parse(args);
-        const result = await getPaper(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_metrics': {
-        const input = MetricsInputSchema.parse(args);
-        const result = await getMetrics(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_citations': {
-        const input = CitationsInputSchema.parse(args);
-        const result = await getCitations(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_references': {
-        const input = CitationsInputSchema.parse(args);
-        const result = await getReferences(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'export': {
-        const input = ExportInputSchema.parse(args);
-        const result = await exportCitations(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_libraries': {
-        const input = GetLibrariesInputSchema.parse(args);
-        const result = await getLibraries(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_library': {
-        const input = GetLibraryInputSchema.parse(args);
-        const result = await getLibrary(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'create_library': {
-        const input = CreateLibraryInputSchema.parse(args);
-        const result = await createLibrary(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'delete_library': {
-        const input = DeleteLibraryInputSchema.parse(args);
-        const result = await deleteLibrary(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'edit_library': {
-        const input = EditLibraryInputSchema.parse(args);
-        const result = await editLibrary(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'manage_documents': {
-        const input = ManageDocumentsInputSchema.parse(args);
-        const result = await manageDocuments(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'add_documents_by_query': {
-        const input = AddDocumentsByQueryInputSchema.parse(args);
-        const result = await addDocumentsByQuery(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'library_operation': {
-        const input = LibraryOperationInputSchema.parse(args);
-        const result = await libraryOperation(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_permissions': {
-        const input = GetPermissionsInputSchema.parse(args);
-        const result = await getPermissions(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'update_permissions': {
-        const input = UpdatePermissionsInputSchema.parse(args);
-        const result = await updatePermissions(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'transfer_library': {
-        const input = TransferLibraryInputSchema.parse(args);
-        const result = await transferLibrary(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_annotation': {
-        const input = GetAnnotationInputSchema.parse(args);
-        const result = await getAnnotation(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'manage_annotation': {
-        const input = ManageAnnotationInputSchema.parse(args);
-        const result = await manageAnnotation(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'delete_annotation': {
-        const input = DeleteAnnotationInputSchema.parse(args);
-        const result = await deleteAnnotation(client, input);
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
     }
-  } catch (error: any) {
-    return {
-      content: [
+  );
+
+  server.registerTool(
+    'get_paper',
+    {
+      description: 'Get detailed information about a specific paper by its SciX bibcode (e.g., 2019ApJ...886..145M).',
+      inputSchema: GetPaperInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getPaper(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_metrics',
+    {
+      description: 'Get citation metrics including h-index, citation counts, and paper statistics for a list of bibcodes.',
+      inputSchema: MetricsInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getMetrics(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_citations',
+    {
+      description: 'Get papers that cite a given paper (forward citations).',
+      inputSchema: CitationsInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getCitations(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_references',
+    {
+      description: 'Get papers referenced by a given paper (backward citations).',
+      inputSchema: CitationsInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getReferences(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'export',
+    {
+      description: 'Export citations in 25+ academic formats (BibTeX, AASTeX, EndNote, IEEE, MNRAS, etc.) with support for custom formatting templates.',
+      inputSchema: ExportInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await exportCitations(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_libraries',
+    {
+      description: 'Get all libraries for the authenticated user. Can filter by type (all, owner, collaborator).',
+      inputSchema: GetLibrariesInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getLibraries(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_library',
+    {
+      description: 'Get details about a specific library including metadata and list of documents.',
+      inputSchema: GetLibraryInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getLibrary(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_library',
+    {
+      description: 'Create a new library with optional initial documents.',
+      inputSchema: CreateLibraryInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await createLibrary(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'delete_library',
+    {
+      description: 'Delete a library permanently.',
+      inputSchema: DeleteLibraryInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await deleteLibrary(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'edit_library',
+    {
+      description: 'Edit library metadata (name, description, public status).',
+      inputSchema: EditLibraryInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await editLibrary(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'manage_documents',
+    {
+      description: 'Add or remove documents from a library.',
+      inputSchema: ManageDocumentsInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await manageDocuments(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'add_documents_by_query',
+    {
+      description: 'Add documents to a library from a SciX search query.',
+      inputSchema: AddDocumentsByQueryInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await addDocumentsByQuery(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'library_operation',
+    {
+      description: 'Perform set operations on libraries (union, intersection, difference, copy, empty).',
+      inputSchema: LibraryOperationInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await libraryOperation(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_permissions',
+    {
+      description: 'Get permission information for a library.',
+      inputSchema: GetPermissionsInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getPermissions(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'update_permissions',
+    {
+      description: 'Grant or modify permissions for a user on a library.',
+      inputSchema: UpdatePermissionsInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await updatePermissions(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'transfer_library',
+    {
+      description: 'Transfer ownership of a library to another user.',
+      inputSchema: TransferLibraryInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await transferLibrary(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_annotation',
+    {
+      description: 'Get annotation/note for a document in a library.',
+      inputSchema: GetAnnotationInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await getAnnotation(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'manage_annotation',
+    {
+      description: 'Add or update an annotation/note for a document in a library.',
+      inputSchema: ManageAnnotationInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await manageAnnotation(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'delete_annotation',
+    {
+      description: 'Delete an annotation/note for a document in a library.',
+      inputSchema: DeleteAnnotationInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const client = getClient();
+        const result = await deleteAnnotation(client, input);
+        return textResult(result);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'search_docs',
+    {
+      description: 'Search SciX help documentation for information about search syntax, features, API usage, and best practices.',
+      inputSchema: SearchDocsInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input) => {
+      try {
+        const results = await searchDocs(input.query, input.limit);
+
+        if (results.length === 0) {
+          return textResult('No documentation found for your query.');
+        }
+
+        const formatted = results.map((r, i) => {
+          let text = `## ${i + 1}. ${r.title}\n`;
+          if (r.subsection) {
+            text += `**Section**: ${r.section} > ${r.subsection}\n`;
+          } else if (r.section) {
+            text += `**Section**: ${r.section}\n`;
+          }
+          text += `**Source**: ${r.source_file} ([view online](${r.source_url}))\n`;
+          text += `**Relevance**: ${r.score.toFixed(1)}\n\n`;
+          text += `${r.snippet}\n`;
+          return text;
+        }).join('\n---\n\n');
+
+        const header = `# SciX Documentation Search Results\n\nFound ${results.length} result${results.length === 1 ? '' : 's'} for "${input.query}":\n\n`;
+
+        return textResult(header + formatted);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerPrompt(
+    'search-workflow',
+    {
+      description: 'Guide for searching astronomical literature effectively using SciX search syntax, operators, and best practices.',
+    },
+    () => ({
+      messages: [
         {
-          type: 'text',
-          text: `Error: ${error.message}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-}
-
-server.setRequestHandler(CallToolRequestSchema, handleToolCall);
-
-server.setRequestHandler(ListPromptsRequestSchema, async () => {
-  return {
-    prompts: [
-      {
-        name: 'search-workflow',
-        description: 'Guide for searching astronomical literature effectively using SciX search syntax, operators, and best practices.',
-      },
-      {
-        name: 'library-management',
-        description: 'Workflows for creating, managing, and organizing paper collections in SciX libraries.',
-      },
-      {
-        name: 'citation-analysis',
-        description: 'Techniques for analyzing citation metrics, h-index, and citation networks.',
-      },
-      {
-        name: 'export-bibliography',
-        description: 'Methods for exporting citations in various formats (BibTeX, AASTeX, EndNote, etc.).',
-      },
-      {
-        name: 'best-practices',
-        description: 'General best practices, performance tips, and error handling for the SciX MCP server.',
-      },
-    ],
-  };
-});
-
-server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-  const { name } = request.params;
-
-  switch (name) {
-    case 'search-workflow':
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: `# SciX Literature Search Guide
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `# SciX Literature Search Guide
 
 ## Search Tool Overview
 
@@ -1164,19 +668,24 @@ search(
 2. Use \`get_metrics\` on top results to identify key papers
 3. Use \`get_references\` on key papers for foundational work
 4. Use \`get_citations\` to find recent developments`,
-            },
           },
-        ],
-      };
+        },
+      ],
+    })
+  );
 
-    case 'library-management':
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: `# SciX Library Management Guide
+  server.registerPrompt(
+    'library-management',
+    {
+      description: 'Workflows for creating, managing, and organizing paper collections in SciX libraries.',
+    },
+    () => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `# SciX Library Management Guide
 
 ## What are Libraries?
 
@@ -1318,19 +827,24 @@ Public libraries can be shared at:
 2. Add initial papers
 3. \`update_permissions\` to grant team access
 4. Share library URL with team`,
-            },
           },
-        ],
-      };
+        },
+      ],
+    })
+  );
 
-    case 'citation-analysis':
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: `# SciX Citation Analysis Guide
+  server.registerPrompt(
+    'citation-analysis',
+    {
+      description: 'Techniques for analyzing citation metrics, h-index, and citation networks.',
+    },
+    () => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `# SciX Citation Analysis Guide
 
 ## Citation Metrics Overview
 
@@ -1455,19 +969,24 @@ Highly cited papers with many forward citations = foundational work
 - Batch bibcodes (up to 2000) for efficiency
 - Combine with library tools to organize analysis
 - Consider both metrics AND qualitative impact`,
-            },
           },
-        ],
-      };
+        },
+      ],
+    })
+  );
 
-    case 'export-bibliography':
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: `# SciX Bibliography Export Guide
+  server.registerPrompt(
+    'export-bibliography',
+    {
+      description: 'Methods for exporting citations in various formats (BibTeX, AASTeX, EndNote, etc.).',
+    },
+    () => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `# SciX Bibliography Export Guide
 
 ## Export Tool Overview
 
@@ -1753,19 +1272,24 @@ This workflow ensures you can track which papers you've reviewed and re-export a
 - Use libraries to organize papers before exporting
 - Consider response size for very large bibliographies (2000 papers)
 - Use custom format instead of post-processing output when possible`,
-            },
           },
-        ],
-      };
+        },
+      ],
+    })
+  );
 
-    case 'best-practices':
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: `# SciX MCP Server - Best Practices & Tips
+  server.registerPrompt(
+    'best-practices',
+    {
+      description: 'General best practices, performance tips, and error handling for the SciX MCP server.',
+    },
+    () => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `# SciX MCP Server - Best Practices & Tips
 
 ## Core Concepts
 
@@ -1939,17 +1463,35 @@ When building workflows:
 - **API Documentation**: https://github.com/adsabs/adsabs-dev-api
 - **Search Syntax**: https://adsabs.github.io/help/search/search-syntax
 - **API Issues**: adshelp@cfa.harvard.edu`,
-            },
           },
-        ],
-      };
+        },
+      ],
+    })
+  );
 
-    default:
-      throw new Error(`Unknown prompt: ${name}`);
-  }
-});
+  server.registerResource(
+    'SciX Usage Guide',
+    'scix://usage-guide',
+    {
+      description: 'Comprehensive guide for using the SciX MCP server: search syntax, workflows, tools reference, and best practices.',
+      mimeType: 'text/markdown',
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: 'text/markdown',
+          text: await readFile(usageGuidePath, 'utf-8'),
+        },
+      ],
+    })
+  );
+
+  return server;
+}
 
 async function main() {
+  const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('SciX MCP Server running on stdio');
