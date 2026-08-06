@@ -68,7 +68,7 @@ const usageGuidePath = path.join(__dirname, '..', 'USAGE_GUIDE.md');
 const server = new Server(
   {
     name: 'scix-mcp',
-    version: '1.0.12',
+    version: '1.0.15',
   },
   {
     capabilities: {
