@@ -33,19 +33,24 @@ export function formatPaperMarkdown(paper: any): string {
   return result;
 }
 
+function formatPaperListItem(paper: any, idx: number): string {
+  const firstAuthor = paper.author?.[0] || 'Unknown';
+  const title = paper.title?.[0] || 'Untitled';
+  const year = paper.year || 'N/A';
+  const citations = paper.citation_count || 0;
+  return (
+    `${idx + 1}. **${title}**\n` +
+    `   - ${firstAuthor} (${year})\n` +
+    `   - Bibcode: \`${paper.bibcode}\`\n` +
+    `   - Citations: ${citations}\n\n`
+  );
+}
+
 export function formatPapersListMarkdown(papers: any[], total: number): string {
   let result = `# Search Results\n\nFound ${total} total papers, showing ${papers.length}\n\n`;
 
   papers.forEach((paper, idx) => {
-    const firstAuthor = paper.author?.[0] || 'Unknown';
-    const title = paper.title?.[0] || 'Untitled';
-    const year = paper.year || 'N/A';
-    const citations = paper.citation_count || 0;
-
-    result += `${idx + 1}. **${title}**\n`;
-    result += `   - ${firstAuthor} (${year})\n`;
-    result += `   - Bibcode: \`${paper.bibcode}\`\n`;
-    result += `   - Citations: ${citations}\n\n`;
+    result += formatPaperListItem(paper, idx);
   });
 
   return result;
@@ -88,15 +93,7 @@ export function formatCitationNetworkMarkdown(papers: any[], relationship: strin
   let result = `# ${relationship}\n\nFound ${total} total papers, showing ${papers.length}\n\n`;
 
   papers.forEach((paper, idx) => {
-    const firstAuthor = paper.author?.[0] || 'Unknown';
-    const title = paper.title?.[0] || 'Untitled';
-    const year = paper.year || 'N/A';
-    const citations = paper.citation_count || 0;
-
-    result += `${idx + 1}. **${title}**\n`;
-    result += `   - ${firstAuthor} (${year})\n`;
-    result += `   - Bibcode: \`${paper.bibcode}\`\n`;
-    result += `   - Citations: ${citations}\n\n`;
+    result += formatPaperListItem(paper, idx);
   });
 
   return result;

@@ -46,7 +46,7 @@ describe('Citations and References Tools', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('search/query');
-      expect(url).toContain('q=citations%28bibcode%3A2024ApJ...123..456A%29');
+      expect(url).toContain('q=citations%28identifier%3A2024ApJ...123..456A%29');
       expect(url).toContain('rows=10');
       expect(url).toContain('sort=citation_count+desc');
 
@@ -151,7 +151,7 @@ describe('Citations and References Tools', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('search/query');
-      expect(url).toContain('q=references%28bibcode%3A2024ApJ...123..456A%29');
+      expect(url).toContain('q=references%28identifier%3A2024ApJ...123..456A%29');
       expect(url).toContain('rows=10');
       expect(url).toContain('sort=citation_count+desc');
 

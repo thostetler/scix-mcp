@@ -1,5 +1,7 @@
 import { vi } from 'vitest';
 
+let originalFetch: typeof globalThis.fetch | undefined;
+
 export interface MockFetchOptions {
   status?: number;
   statusText?: string;
@@ -69,6 +71,9 @@ export function createMockFetch(options: MockFetchOptions = {}) {
  */
 export function setupMockFetch(options: MockFetchOptions = {}) {
   const mockFetch = createMockFetch(options);
+  if (originalFetch === undefined) {
+    originalFetch = global.fetch;
+  }
   global.fetch = mockFetch as any;
   return mockFetch;
 }
@@ -111,6 +116,10 @@ export function createTimeoutFetch(timeoutMs: number = 100) {
  * Restores the original fetch implementation
  */
 export function restoreFetch() {
+  if (originalFetch !== undefined) {
+    global.fetch = originalFetch;
+    originalFetch = undefined;
+  }
   vi.restoreAllMocks();
 }
 
