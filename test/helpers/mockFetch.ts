@@ -56,7 +56,12 @@ export function createMockFetch(options: MockFetchOptions = {}) {
         'content-type': 'application/json',
         ...headers
       })),
-      json: async () => body,
+      json: async () => {
+        if (emptyBody) {
+          throw new SyntaxError('Unexpected end of JSON input');
+        }
+        return body;
+      },
       text: async () => (emptyBody ? '' : JSON.stringify(body)),
       blob: async () => new Blob([JSON.stringify(body)]),
       arrayBuffer: async () => new ArrayBuffer(0),

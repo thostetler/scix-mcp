@@ -342,6 +342,20 @@ describe('SciXAPIClient', () => {
       await expect(client.put('test', {})).resolves.toEqual({});
       await expect(client.delete('test')).resolves.toEqual({});
     });
+
+    it('should return {} for a whitespace-only success body instead of throwing', async () => {
+      const mockFetch = setupMockFetch({ status: 200, statusText: 'OK' });
+      mockFetch.mockImplementation(async () => ({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: new Map([['content-type', 'application/json']]),
+        text: async () => '   \n  ',
+        json: async () => ({})
+      } as any));
+
+      await expect(client.get('test')).resolves.toEqual({});
+    });
   });
 
   describe('error messages', () => {
@@ -388,6 +402,26 @@ describe('SciXAPIClient', () => {
       expect(error).toBeInstanceOf(SciXAPIError);
       expect(error.status).toBe(400);
       expect(error.message).toContain('Malformed query near "foo"');
+    });
+
+    it('should preserve the raw error-body text on SciXAPIError.body when not JSON', async () => {
+      const mockFetch = setupMockFetch({ status: 500, statusText: 'Internal Server Error' });
+      const raw = '<html><body>500 upstream failure</body></html>';
+      mockFetch.mockImplementation(async () => ({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: new Map([['content-type', 'text/html']]),
+        text: async () => raw,
+        json: async () => {
+          throw new Error('not json');
+        }
+      } as any));
+
+      const error = await client.get('test').catch((e) => e);
+
+      expect(error).toBeInstanceOf(SciXAPIError);
+      expect(error.body).toBe(raw);
     });
 
     it('should still throw a typed error when the error body is not JSON', async () => {

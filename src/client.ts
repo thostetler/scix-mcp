@@ -41,6 +41,7 @@ export class SciXAPIError extends Error {
 
   constructor(message: string, status: number, body: unknown) {
     super(message);
+    Object.setPrototypeOf(this, new.target.prototype);
     this.name = 'SciXAPIError';
     this.status = status;
     this.body = body;
@@ -131,7 +132,8 @@ export class SciXAPIClient {
         );
       }
 
-      return text ? JSON.parse(text) : {};
+      const trimmed = text.trim();
+      return trimmed ? JSON.parse(trimmed) : {};
     } catch (error: unknown) {
       clearTimeout(timeout);
       if (error instanceof Error && error.name === 'AbortError') {
@@ -143,12 +145,12 @@ export class SciXAPIClient {
 
   private safeParseJson(text: string): unknown {
     if (!text) {
-      return {};
+      return undefined;
     }
     try {
       return JSON.parse(text);
     } catch {
-      return undefined;
+      return text;
     }
   }
 
