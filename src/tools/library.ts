@@ -1,4 +1,4 @@
-import { SciXAPIClient } from '../client.js';
+import { SciXAPIClient, SciXAPIError } from '../client.js';
 import {
   GetLibrariesInput,
   GetLibraryInput,
@@ -248,9 +248,8 @@ export async function addDocumentsByQuery(
     return `Documents added to library from query.\n\n` +
       `**Query**: ${input.query}\n` +
       `**Documents added**: ${data.number_added || 0}`;
-  } catch (error: any) {
-    const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
-    const isNotFound = message.includes('not found') || message.includes('404');
+  } catch (error: unknown) {
+    const isNotFound = error instanceof SciXAPIError && error.status === 404;
 
     if (!isNotFound) {
       throw error;

@@ -445,6 +445,34 @@ describe('Library Tools', () => {
       expect(result).toContain('2');
     });
 
+    it('should not fall back when a non-404 error message merely contains "not found"', async () => {
+      // A 500 whose ADS body says "not found" must NOT trigger the search
+      // fallback — only a genuine 404 should. The fallback is status-driven.
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: new Map(),
+        json: async () => ({ error: 'query endpoint not found in upstream' }),
+        text: async () => JSON.stringify({ error: 'query endpoint not found in upstream' })
+      } as any);
+
+      global.fetch = mockFetch as any;
+
+      await expect(
+        addDocumentsByQuery(client, {
+          library_id: 'lib1',
+          query: 'black hole',
+          rows: 2,
+          response_format: ResponseFormat.MARKDOWN
+        })
+      ).rejects.toThrow();
+
+      // Only the query endpoint was hit — no fallback search/add calls.
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch.mock.calls[0][0]).toContain('biblib/documents/lib1/query');
+    });
+
     it('should respond gracefully when search finds no documents', async () => {
       const searchResponse = { response: { docs: [] } };
 
