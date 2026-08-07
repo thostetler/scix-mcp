@@ -1,12 +1,80 @@
 import { describe, it, expect } from 'vitest';
 import {
+  formatDocsSearchMarkdown,
   formatPaperMarkdown,
   formatPapersListMarkdown,
   formatMetricsMarkdown,
   formatCitationNetworkMarkdown,
 } from '../src/formatters.js';
+import type { SearchResult } from '../src/search-docs.js';
+
+function docResult(overrides: Partial<SearchResult> = {}): SearchResult {
+  return {
+    id: 'doc-1',
+    title: 'Author Search',
+    section: 'Searching',
+    subsection: 'By Author',
+    source_file: 'searching.md',
+    source_url: 'https://scixplorer.org/help/searching',
+    doc_type: 'scix_help',
+    category: 'search_docs',
+    score: 12.34,
+    snippet: 'Search by author using author:"Last, F.".',
+    ...overrides,
+  };
+}
 
 describe('formatters', () => {
+  describe('formatDocsSearchMarkdown', () => {
+    it('returns the no-results message for an empty result set', () => {
+      expect(formatDocsSearchMarkdown([], 'author search')).toBe(
+        'No documentation found for your query.'
+      );
+    });
+
+    it('renders header, section, source, relevance, and snippet', () => {
+      const md = formatDocsSearchMarkdown([docResult()], 'author search');
+      expect(md).toContain('# SciX Documentation Search Results');
+      expect(md).toContain('Found 1 result for "author search":');
+      expect(md).toContain('## 1. Author Search');
+      expect(md).toContain('**Section**: Searching > By Author');
+      expect(md).toContain(
+        '**Source**: searching.md ([view online](https://scixplorer.org/help/searching))'
+      );
+      expect(md).toContain('**Relevance**: 12.3');
+      expect(md).toContain('Search by author using author:"Last, F.".');
+    });
+
+    it('pluralizes the result count and joins entries with a divider', () => {
+      const md = formatDocsSearchMarkdown(
+        [docResult(), docResult({ id: 'doc-2', title: 'Second' })],
+        'q'
+      );
+      expect(md).toContain('Found 2 results for "q":');
+      expect(md).toContain('## 2. Second');
+      expect(md).toContain('\n---\n\n');
+    });
+
+    it('renders a subsection with an empty section as it appears in the index', () => {
+      const md = formatDocsSearchMarkdown([docResult({ section: '' })], 'q');
+      expect(md).toContain('**Section**:  > By Author');
+    });
+
+    it('renders only the section when no subsection is present', () => {
+      const md = formatDocsSearchMarkdown([docResult({ subsection: '' })], 'q');
+      expect(md).toContain('**Section**: Searching\n');
+      expect(md).not.toContain(' > ');
+    });
+
+    it('omits the section line when both section and subsection are empty', () => {
+      const md = formatDocsSearchMarkdown(
+        [docResult({ section: '', subsection: '' })],
+        'q'
+      );
+      expect(md).not.toContain('**Section**:');
+    });
+  });
+
   describe('formatPaperMarkdown', () => {
     const fullPaper = {
       bibcode: '2024ApJ...123..456A',
