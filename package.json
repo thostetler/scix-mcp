@@ -11,7 +11,8 @@
     "data/scix/chunked-index.json",
     "README.md",
     "LICENSE",
-    "USAGE_GUIDE.md"
+    "USAGE_GUIDE.md",
+    "prompts"
   ],
   "scripts": {
     "build": "tsc",
