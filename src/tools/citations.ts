@@ -17,7 +17,7 @@ export async function getCitations(client: SciXAPIClient, input: CitationsInput)
   const docs = response.response?.docs || [];
 
   if (input.response_format === ResponseFormat.JSON) {
-    return JSON.stringify(response, null, 2);
+    return JSON.stringify({ numFound, start: 0, docs }, null, 2);
   }
 
   return formatCitationNetworkMarkdown(docs, `Papers citing ${input.bibcode}`, numFound);
@@ -36,7 +36,7 @@ export async function getReferences(client: SciXAPIClient, input: CitationsInput
   const docs = response.response?.docs || [];
 
   if (input.response_format === ResponseFormat.JSON) {
-    return JSON.stringify(response, null, 2);
+    return JSON.stringify({ numFound, start: 0, docs }, null, 2);
   }
 
   return formatCitationNetworkMarkdown(docs, `Papers referenced by ${input.bibcode}`, numFound);

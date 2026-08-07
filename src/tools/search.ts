@@ -14,12 +14,13 @@ export async function search(client: SciXAPIClient, input: SearchInput): Promise
 
   const response = await client.get('search/query', params);
 
-  if (input.response_format === ResponseFormat.JSON) {
-    return JSON.stringify(response, null, 2);
-  }
-
   const numFound = response.response?.numFound || 0;
   const docs = response.response?.docs || [];
+
+  if (input.response_format === ResponseFormat.JSON) {
+    return JSON.stringify({ numFound, start: input.start, docs }, null, 2);
+  }
+
   const hasMore = (input.start + input.rows) < numFound;
 
   let result = formatPapersListMarkdown(docs, numFound);
