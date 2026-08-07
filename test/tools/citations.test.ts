@@ -113,7 +113,7 @@ describe('Citations and References Tools', () => {
         }
       };
 
-      setupMockFetch({ body: mockResponse });
+      setupMockFetch({ body: { responseHeader: { status: 0 }, ...mockResponse } });
 
       const result = await getCitations(client, {
         bibcode: '2024ApJ...123..456A',
@@ -122,7 +122,22 @@ describe('Citations and References Tools', () => {
       });
 
       const parsed = JSON.parse(result);
-      expect(parsed).toEqual(mockResponse);
+      expect(parsed).toEqual({ numFound: 1, start: 0, docs: [{ bibcode: 'test' }] });
+      expect(Object.keys(parsed).sort()).toEqual(['docs', 'numFound', 'start']);
+      expect(parsed).not.toHaveProperty('responseHeader');
+    });
+
+    it('should return slim JSON for empty/missing response', async () => {
+      setupMockFetch({ body: { responseHeader: { status: 0 } } });
+
+      const result = await getCitations(client, {
+        bibcode: '2024ApJ...123..456A',
+        rows: 10,
+        response_format: ResponseFormat.JSON
+      });
+
+      const parsed = JSON.parse(result);
+      expect(parsed).toEqual({ numFound: 0, start: 0, docs: [] });
     });
 
     it('should handle papers with no citations', async () => {
@@ -220,7 +235,7 @@ describe('Citations and References Tools', () => {
         }
       };
 
-      setupMockFetch({ body: mockResponse });
+      setupMockFetch({ body: { responseHeader: { status: 0 }, ...mockResponse } });
 
       const result = await getReferences(client, {
         bibcode: '2024ApJ...123..456A',
@@ -229,7 +244,22 @@ describe('Citations and References Tools', () => {
       });
 
       const parsed = JSON.parse(result);
-      expect(parsed).toEqual(mockResponse);
+      expect(parsed).toEqual({ numFound: 1, start: 0, docs: [{ bibcode: 'test' }] });
+      expect(Object.keys(parsed).sort()).toEqual(['docs', 'numFound', 'start']);
+      expect(parsed).not.toHaveProperty('responseHeader');
+    });
+
+    it('should return slim JSON for missing response (references)', async () => {
+      setupMockFetch({ body: { responseHeader: { status: 0 } } });
+
+      const result = await getReferences(client, {
+        bibcode: '2024ApJ...123..456A',
+        rows: 10,
+        response_format: ResponseFormat.JSON
+      });
+
+      const parsed = JSON.parse(result);
+      expect(parsed).toEqual({ numFound: 0, start: 0, docs: [] });
     });
 
     it('should handle papers with no references', async () => {

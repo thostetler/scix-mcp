@@ -186,6 +186,7 @@ describe('Search Tool', () => {
 
     it('should return JSON format', async () => {
       const mockResponse = {
+        responseHeader: { status: 0, QTime: 5 },
         response: {
           numFound: 1,
           docs: [{ bibcode: 'test' }]
@@ -197,12 +198,28 @@ describe('Search Tool', () => {
       const result = await search(client, {
         query: 'test',
         rows: 10,
+        start: 25,
+        response_format: ResponseFormat.JSON
+      });
+
+      const parsed = JSON.parse(result);
+      expect(parsed).toEqual({ numFound: 1, start: 25, docs: [{ bibcode: 'test' }] });
+      expect(Object.keys(parsed).sort()).toEqual(['docs', 'numFound', 'start']);
+      expect(parsed).not.toHaveProperty('responseHeader');
+    });
+
+    it('should return slim JSON for empty/missing response', async () => {
+      setupMockFetch({ body: { responseHeader: { status: 0 } } });
+
+      const result = await search(client, {
+        query: 'nonexistent',
+        rows: 10,
         start: 0,
         response_format: ResponseFormat.JSON
       });
 
       const parsed = JSON.parse(result);
-      expect(parsed).toEqual(mockResponse);
+      expect(parsed).toEqual({ numFound: 0, start: 0, docs: [] });
     });
 
     it('should handle empty results', async () => {
