@@ -237,3 +237,121 @@ export const SearchDocsInputSchema = z.object({
 });
 
 export type SearchDocsInput = z.infer<typeof SearchDocsInputSchema>;
+
+// Response Types
+//
+// Plain interfaces for the ADS/SciX response shapes consumed by the tools
+// and formatters — the consumed subset only, not the full ADS universe, and
+// not runtime-validated. Solr fields are optional: ADS drops empty ones, so
+// formatters guard with `||` / `?.`. biblib metadata below is required (the
+// API returns it whole).
+
+// Solr document (search/query `docs[]`), limited to DEFAULT_FIELDS usage.
+export interface Paper {
+  // bibcode is the doc identifier — always requested, never dropped by ADS.
+  bibcode: string;
+  title?: string[];
+  author?: string[];
+  year?: string | number;
+  pub?: string;
+  abstract?: string;
+  citation_count?: number;
+  read_count?: number;
+  doi?: string[];
+  // identifier entries are not guaranteed strings; formatPaperMarkdown guards.
+  identifier?: string | unknown[];
+}
+
+// search/query envelope.
+export interface SolrResponse {
+  response?: {
+    numFound?: number;
+    start?: number;
+    docs?: Paper[];
+  };
+}
+
+// metrics endpoint response (consumed subset).
+export interface MetricsIndicators {
+  h?: number;
+  g?: number;
+  i10?: number;
+  m?: number;
+  tori?: number;
+}
+
+export interface MetricsCitationStats {
+  'total number of citations'?: number;
+  'total number of refereed citations'?: number;
+  'average number of citations'?: number;
+  'median number of citations'?: number;
+  'number of self-citations'?: number;
+}
+
+export interface MetricsBasicStats {
+  'number of papers'?: number;
+  'total number of reads'?: number;
+  'average number of reads'?: number;
+}
+
+export interface Metrics {
+  indicators?: MetricsIndicators;
+  'citation stats'?: MetricsCitationStats;
+  'basic stats'?: MetricsBasicStats;
+}
+
+// export endpoint response.
+export interface ExportResponse {
+  export?: string;
+}
+
+// biblib library metadata.
+export interface LibraryMetadata {
+  id: string;
+  name: string;
+  description: string;
+  num_documents: number;
+  date_created: string;
+  date_last_modified: string;
+  permission: string;
+  owner: string;
+  public: boolean;
+  num_users: number;
+}
+
+// Library mutation responses may return metadata at the root or under
+// `metadata` — model both by widening with the optional metadata fields.
+export interface LibraryMetadataResponse extends Partial<LibraryMetadata> {
+  metadata?: LibraryMetadata;
+}
+
+export interface GetLibraryResponse extends LibraryMetadataResponse {
+  documents?: string[];
+}
+
+export interface LibrariesListResponse {
+  libraries?: LibraryMetadata[];
+}
+
+export interface DocumentUpdateResponse {
+  number_added?: number;
+  number_removed?: number;
+}
+
+export interface LibraryOperationResponse {
+  library_id?: string;
+  number_added?: number;
+}
+
+export interface PermissionsResponse {
+  owner?: string;
+  collaborators?: Record<string, string[]>;
+}
+
+export interface Annotation {
+  id: string;
+  bibcode: string;
+  content: string;
+  date_created: string;
+  date_last_modified: string;
+}

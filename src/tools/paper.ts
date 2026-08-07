@@ -1,6 +1,6 @@
 import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
-import { GetPaperInput, ResponseFormat } from '../types.js';
+import { GetPaperInput, ResponseFormat, SolrResponse } from '../types.js';
 import { formatPaperMarkdown } from '../formatters.js';
 import { buildIdentifierQuery } from '../identifier-query.js';
 
@@ -11,7 +11,7 @@ export async function getPaper(client: SciXAPIClient, input: GetPaperInput): Pro
     rows: 1
   };
 
-  const response = await client.get('search/query', params);
+  const response = await client.get<SolrResponse>('search/query', params);
   const docs = response.response?.docs || [];
 
   if (docs.length === 0) {

@@ -1,4 +1,5 @@
 import type { SearchResult } from './search-docs.js';
+import type { Paper, Metrics } from './types.js';
 
 export function formatDocsSearchMarkdown(results: SearchResult[], query: string): string {
   if (results.length === 0) {
@@ -25,7 +26,7 @@ export function formatDocsSearchMarkdown(results: SearchResult[], query: string)
   return header + formatted;
 }
 
-export function formatPaperMarkdown(paper: any): string {
+export function formatPaperMarkdown(paper: Paper): string {
   const authors = paper.author || [];
   const authorStr = authors.length > 3
     ? `${authors.slice(0, 3).join(', ')} et al.`
@@ -55,7 +56,7 @@ export function formatPaperMarkdown(paper: any): string {
     ? [paper.identifier]
     : [];
   const arxivEntry = identifiers.find(
-    (id: unknown) => typeof id === 'string' && id.toLowerCase().startsWith('arxiv:')
+    (id): id is string => typeof id === 'string' && id.toLowerCase().startsWith('arxiv:')
   );
 
   if (arxivEntry) {
@@ -69,7 +70,7 @@ export function formatPaperMarkdown(paper: any): string {
   return result;
 }
 
-function formatPaperListItem(paper: any, idx: number): string {
+function formatPaperListItem(paper: Paper, idx: number): string {
   const firstAuthor = paper.author?.[0] || 'Unknown';
   const title = paper.title?.[0] || 'Untitled';
   const year = paper.year || 'N/A';
@@ -82,7 +83,7 @@ function formatPaperListItem(paper: any, idx: number): string {
   );
 }
 
-export function formatPapersListMarkdown(papers: any[], total: number): string {
+export function formatPapersListMarkdown(papers: Paper[], total: number): string {
   let result = `# Search Results\n\nFound ${total} total papers, showing ${papers.length}\n\n`;
 
   papers.forEach((paper, idx) => {
@@ -92,7 +93,7 @@ export function formatPapersListMarkdown(papers: any[], total: number): string {
   return result;
 }
 
-export function formatMetricsMarkdown(metrics: any): string {
+export function formatMetricsMarkdown(metrics: Metrics): string {
   let result = `# Citation Metrics\n\n`;
 
   if (metrics.indicators) {
@@ -125,7 +126,7 @@ export function formatMetricsMarkdown(metrics: any): string {
   return result;
 }
 
-export function formatCitationNetworkMarkdown(papers: any[], relationship: string, total: number): string {
+export function formatCitationNetworkMarkdown(papers: Paper[], relationship: string, total: number): string {
   let result = `# ${relationship}\n\nFound ${total} total papers, showing ${papers.length}\n\n`;
 
   papers.forEach((paper, idx) => {

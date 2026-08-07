@@ -1,6 +1,6 @@
 import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
-import { SearchInput, ResponseFormat } from '../types.js';
+import { SearchInput, ResponseFormat, SolrResponse } from '../types.js';
 import { formatPapersListMarkdown } from '../formatters.js';
 
 export async function search(client: SciXAPIClient, input: SearchInput): Promise<string> {
@@ -12,7 +12,7 @@ export async function search(client: SciXAPIClient, input: SearchInput): Promise
     sort: input.sort
   };
 
-  const response = await client.get('search/query', params);
+  const response = await client.get<SolrResponse>('search/query', params);
 
   const numFound = response.response?.numFound || 0;
   const docs = response.response?.docs || [];
