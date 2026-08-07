@@ -348,8 +348,8 @@ if (invokedDirectly) {
   const q = process.argv.slice(2).join(' ');
 
   if (!q) {
-    console.log('Usage: node search-docs.mjs <query>');
-    console.log('Example: node search-docs.mjs author search');
+    console.log('Usage: node search-docs.js <query>');
+    console.log('Example: node search-docs.js author search');
     process.exit(1);
   }
 

@@ -57,10 +57,10 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 ## Features
 
 - **Literature Search**: Full-text search with advanced Solr query syntax
-- **Paper Details**: Retrieve comprehensive metadata for any publication
+- **Paper Details**: Retrieve metadata for any publication
 - **Citation Metrics**: Calculate h-index, citation counts, and usage statistics
 - **Citation Network**: Explore forward and backward citations
-- **Export**: Generate citations in BibTeX, AASTeX, EndNote, and MEDLARS formats
+- **Export**: Generate citations in 23 bibliographic formats (BibTeX, AASTeX, EndNote, RIS, and more) — see the `export` tool's `format` enum in `src/types.ts` for the full list
 - **Documentation Search**: Query SciX help/docs content via the `search_docs` tool
 - **Dual Format**: Support for both human-readable Markdown and machine-readable JSON
 
@@ -80,7 +80,7 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 
 ### Export
 
-- `export`: Export `bibcodes` (1-2000) in `format` (`bibtex` | `aastex` | `endnote` | `medlars`). Returns plain text in the chosen format.
+- `export`: Export `bibcodes` (1-2000) in `format` — one of the 23 formats in the `ExportInputSchema` enum in `src/types.ts` (e.g. `bibtex`, `aastex`, `endnote`, `ris`, `ieee`, `mnras`). Use `custom_format` with `format: custom` for a template. Returns plain text in the chosen format.
 
 ### Documentation
 
@@ -117,7 +117,7 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 
 ## SciX Search Syntax
 
-The SciX search supports powerful query syntax:
+The SciX search supports Solr query syntax:
 
 | Syntax                  | Description       | Example                          |
 | ----------------------- | ----------------- | -------------------------------- |
@@ -136,15 +136,15 @@ The SciX search supports powerful query syntax:
 ### Install & Build
 
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm build
 ```
 
 ### Local commands
 
 ```bash
 # Watch mode
-npm run dev
+pnpm dev
 
 # Test with MCP Inspector
 npx @modelcontextprotocol/inspector node build/index.js
@@ -152,7 +152,7 @@ npx @modelcontextprotocol/inspector node build/index.js
 
 ## Testing
 
-The project includes a comprehensive test suite using Vitest.
+The project uses Vitest.
 
 ### Running Tests
 
@@ -200,50 +200,27 @@ The test suite covers:
 
 ### API Token for Tests
 
-Tests use mock fetch and don't require a real API token. The test suite sets `ADS_DEV_KEY=test-api-key` automatically.
-
-### Live Integration Tests (Optional)
-
-To run tests against the real ADS API (skipped by default):
-
-1. Set your real API key:
-   ```bash
-   export SCIX_API_TOKEN=your_real_api_key
-   ```
-
-2. Run integration tests (not implemented yet):
-   ```bash
-   pnpm test:integration
-   ```
-
-**Note**: Integration tests count against your daily rate limit (5000 requests/day).
+Tests use mock fetch and don't require a real API token. Individual tests set `SCIX_API_TOKEN='test-api-key'` as needed.
 
 ## Project Structure
 
 ```
 src/
-├── index.ts          # Main server entry point
-├── client.ts         # SciX API client wrapper
-├── types.ts          # TypeScript/Zod type definitions
-├── formatters.ts     # Response formatting utilities
-├── config.ts         # Configuration constants
+├── index.ts             # Main server entry point
+├── client.ts            # SciX API client wrapper
+├── types.ts             # TypeScript/Zod type definitions
+├── formatters.ts        # Response formatting utilities
+├── config.ts            # Configuration constants
+├── identifier-query.ts  # Identifier (bibcode/DOI/arXiv/SciX) resolution
+├── search-docs.ts       # Offline docs search (search_docs tool)
 └── tools/
-    ├── search.ts     # Search tool
-    ├── paper.ts      # Paper details tool
-    ├── metrics.ts    # Metrics tool
-    ├── citations.ts  # Citation network tools
-    └── export.ts     # Export tool
+    ├── search.ts        # Search tool
+    ├── paper.ts         # Paper details tool
+    ├── metrics.ts       # Metrics tool
+    ├── citations.ts     # Citation network tools
+    ├── export.ts        # Export tool
+    └── library.ts       # Library management tools
 ```
-
-### Library tools
-
-- `get_libraries` / `get_library`: List and inspect libraries
-- `create_library` / `delete_library` / `edit_library`: Manage library metadata
-- `manage_documents`: Add/remove bibcodes to a library
-- `add_documents_by_query`: Add results from a search query to a library
-- `library_operation`: Union/intersection/difference/copy/empty on libraries
-- `get_permissions` / `update_permissions` / `transfer_library`: Manage sharing
-- `get_annotation` / `manage_annotation` / `delete_annotation`: Handle notes on documents
 
 ## Example Usage
 
