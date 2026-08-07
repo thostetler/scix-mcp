@@ -4,10 +4,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { readFile } from 'node:fs/promises';
-import { realpathSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { SciXAPIClient } from './client.js';
+import { isDirectRun } from './is-direct-run.js';
 import { search } from './tools/search.js';
 import { getPaper } from './tools/paper.js';
 import { getMetrics } from './tools/metrics.js';
@@ -63,6 +64,23 @@ function promptPath(id: string): string {
   return path.join(promptsDir, `${id}.md`);
 }
 
+// Read the version from package.json at runtime so it lives in one place.
+// build/index.js sits alongside build/, so ../package.json resolves to the
+// package root both in the built tree and after npm install.
+function readServerVersion(): string {
+  const pkgPath = path.join(__dirname, '..', 'package.json');
+  const parsed: unknown = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  if (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    'version' in parsed &&
+    typeof parsed.version === 'string'
+  ) {
+    return parsed.version;
+  }
+  throw new Error(`Could not read version from ${pkgPath}`);
+}
+
 function textResult(text: string): CallToolResult {
   return { content: [{ type: 'text', text }] };
 }
@@ -75,7 +93,7 @@ function errorResult(error: unknown): CallToolResult {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: 'scix-mcp',
-    version: '1.0.15',
+    version: readServerVersion(),
   });
 
   // Construct the API client lazily so a missing/invalid SCIX_API_TOKEN
@@ -689,12 +707,7 @@ async function main() {
   console.error('SciX MCP Server running on stdio');
 }
 
-const entryPath = process.argv[1];
-const isDirectRun =
-  entryPath !== undefined &&
-  import.meta.url === pathToFileURL(realpathSync(entryPath)).href;
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main().catch((error) => {
     console.error('Server error:', error);
     process.exit(1);

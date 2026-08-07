@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import MiniSearch, { type SearchOptions } from 'minisearch';
+import { isDirectRun } from './is-direct-run.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DOCS_PATH = path.join(__dirname, '..', 'data', 'scix', 'chunked-index.json');
@@ -242,9 +243,7 @@ export async function searchDocs(query: string, limit = 5, options: SearchOption
   });
 }
 
-const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-
-if (invokedDirectly) {
+if (isDirectRun(import.meta.url)) {
 
   const q = process.argv.slice(2).join(' ');
 
