@@ -32,7 +32,7 @@ interface DocChunk {
   char_count: number;
 }
 
-interface SearchResult {
+export interface SearchResult {
   id: string;
   title: string;
   section: string;
@@ -43,13 +43,6 @@ interface SearchResult {
   category: string;
   score: number;
   snippet: string;
-}
-
-interface SearchStats {
-  totalDocs: number;
-  byCategory: Record<string, number>;
-  byDocType: Record<string, number>;
-  avgContentLength: number;
 }
 
 let docs: DocChunk[] = [];
@@ -247,98 +240,6 @@ export async function searchDocs(query: string, limit = 5, options: SearchOption
       snippet
     };
   });
-}
-
-export async function getDocById(id: string): Promise<DocChunk | null> {
-  await initIndex();
-  return docs.find((d) => d.id === id) || null;
-}
-
-export async function searchByCategory(category: string, query = '', limit = 10): Promise<SearchResult[]> {
-  await initIndex();
-
-  const safeLimit = Math.max(1, Math.floor(limit) || 1);
-  const categoryDocs = docs.filter((d) => d.category === category);
-
-  if (!query || !query.trim()) {
-    return categoryDocs.slice(0, safeLimit).map((d) => ({
-      id: d.id,
-      title: d.title,
-      section: d.section,
-      subsection: d.subsection,
-      source_file: d.source_file,
-      source_url: d.source_url,
-      doc_type: d.doc_type,
-      category: d.category,
-      score: 0,
-      snippet: d.content.slice(0, SNIPPET_MAX_LENGTH) + (d.content.length > SNIPPET_MAX_LENGTH ? '...' : '')
-    }));
-  }
-
-  const tempSearch = new MiniSearch({
-    fields: ['title', 'section', 'subsection', 'content'],
-    storeFields: [
-      'id',
-      'title',
-      'section',
-      'subsection',
-      'source_file',
-      'source_url',
-      'doc_type',
-      'category',
-      'content'
-    ],
-  });
-
-  tempSearch.addAll(categoryDocs);
-
-  const results = tempSearch.search(query, {
-    prefix: true,
-    fuzzy: 0.2,
-    boost: { title: 4, section: 2 },
-  });
-
-  const terms = query.split(/\s+/).filter(Boolean);
-
-  return results.slice(0, safeLimit).map((r) => {
-    const snippet = makeSnippet(r.content || '', terms);
-
-    return {
-      id: r.id,
-      title: r.title || '',
-      section: r.section || '',
-      subsection: r.subsection || '',
-      source_file: r.source_file || '',
-      source_url: r.source_url || '',
-      doc_type: r.doc_type || '',
-      category: r.category || '',
-      score: r.score,
-      snippet
-    };
-  });
-}
-
-export async function getStats(): Promise<SearchStats> {
-  await initIndex();
-
-  const stats: SearchStats = {
-    totalDocs: docs.length,
-    byCategory: {},
-    byDocType: {},
-    avgContentLength: 0
-  };
-
-  let totalChars = 0;
-
-  for (const doc of docs) {
-    stats.byCategory[doc.category] = (stats.byCategory[doc.category] || 0) + 1;
-    stats.byDocType[doc.doc_type] = (stats.byDocType[doc.doc_type] || 0) + 1;
-    totalChars += doc.content.length;
-  }
-
-  stats.avgContentLength = docs.length ? Math.round(totalChars / docs.length) : 0;
-
-  return stats;
 }
 
 const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;

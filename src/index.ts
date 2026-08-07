@@ -14,6 +14,7 @@ import { getMetrics } from './tools/metrics.js';
 import { getCitations, getReferences } from './tools/citations.js';
 import { exportCitations } from './tools/export.js';
 import { searchDocs } from './search-docs.js';
+import { formatDocsSearchMarkdown } from './formatters.js';
 import {
   getLibraries,
   getLibrary,
@@ -563,27 +564,7 @@ export function createServer(): McpServer {
     async (input) => {
       try {
         const results = await searchDocs(input.query, input.limit);
-
-        if (results.length === 0) {
-          return textResult('No documentation found for your query.');
-        }
-
-        const formatted = results.map((r, i) => {
-          let text = `## ${i + 1}. ${r.title}\n`;
-          if (r.subsection) {
-            text += `**Section**: ${r.section} > ${r.subsection}\n`;
-          } else if (r.section) {
-            text += `**Section**: ${r.section}\n`;
-          }
-          text += `**Source**: ${r.source_file} ([view online](${r.source_url}))\n`;
-          text += `**Relevance**: ${r.score.toFixed(1)}\n\n`;
-          text += `${r.snippet}\n`;
-          return text;
-        }).join('\n---\n\n');
-
-        const header = `# SciX Documentation Search Results\n\nFound ${results.length} result${results.length === 1 ? '' : 's'} for "${input.query}":\n\n`;
-
-        return textResult(header + formatted);
+        return textResult(formatDocsSearchMarkdown(results, input.query));
       } catch (error) {
         return errorResult(error);
       }
