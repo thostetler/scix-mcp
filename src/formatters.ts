@@ -1,5 +1,33 @@
 import type { SearchResult } from './search-docs.js';
-import type { Paper, Metrics } from './types.js';
+import type { HealthReport, Paper, Metrics } from './types.js';
+
+const PROBE_LABELS: Record<HealthReport['probe']['state'], string> = {
+  ok: 'ok',
+  unauthorized: 'unauthorized (401)',
+  rate_limited: 'rate limited (429)',
+  unreachable: 'unreachable',
+  skipped: 'skipped'
+};
+
+export function formatHealthCheckMarkdown(report: HealthReport, timeoutMs: number): string {
+  const probeLabel = PROBE_LABELS[report.probe.state];
+  const probeLine = report.probe.message
+    ? `${probeLabel} — ${report.probe.message}`
+    : probeLabel;
+
+  let result = `# SciX MCP Health Check\n\n`;
+  result += `**Server:** ${report.server.name} v${report.server.version}\n\n`;
+  result += `**API base:** ${report.api_base}\n\n`;
+  result += `**Token configured:** ${report.token_configured ? 'yes' : 'no'}\n\n`;
+  result += `**Auth probe:** ${probeLine}\n\n`;
+  result += `_Probe timeout: ${timeoutMs / 1000}s._\n\n`;
+
+  result += `## Registered tools (${report.tools.length})\n\n`;
+  result += report.tools.map((name) => `- \`${name}\``).join('\n');
+  result += `\n`;
+
+  return result;
+}
 
 export function formatDocsSearchMarkdown(results: SearchResult[], query: string): string {
   if (results.length === 0) {

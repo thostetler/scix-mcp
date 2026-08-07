@@ -62,6 +62,7 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 - **Citation Network**: Explore forward and backward citations
 - **Export**: Generate citations in 23 bibliographic formats (BibTeX, AASTeX, EndNote, RIS, and more) — see the `export` tool's `format` enum in `src/types.ts` for the full list
 - **Documentation Search**: Query SciX help/docs content via the `search_docs` tool
+- **Health Check**: Diagnose setup (token, API reachability, tool registry) via the `health_check` tool
 - **Dual Format**: Support for both human-readable Markdown and machine-readable JSON
 
 ## Available Tools
@@ -108,6 +109,10 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 - `get_annotation`: Fetch note content for `library_id` + `bibcode`; optional `response_format`.
 - `manage_annotation`: Add/update note with `library_id`, `bibcode`, `content`, and optional `response_format`.
 - `delete_annotation`: Remove note for `library_id` + `bibcode`; optional `response_format`.
+
+### Diagnostics
+
+- `health_check`: Diagnose the server setup. No required params (optional `response_format`). Reports server name/version, API base URL, whether a token is configured, an authentication probe result (`ok` | `unauthorized` | `rate_limited` | `unreachable` | `skipped`), and the registered tool names. Never emits the token value. Runs without a token (probe is `skipped`); use it to tell setup problems apart from ordinary API errors.
 
 ## Rate Limits
 

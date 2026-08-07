@@ -14,6 +14,7 @@ import { getPaper } from './tools/paper.js';
 import { getMetrics } from './tools/metrics.js';
 import { getCitations, getReferences } from './tools/citations.js';
 import { exportCitations } from './tools/export.js';
+import { healthCheck } from './tools/health.js';
 import { searchDocs } from './search-docs.js';
 import { formatDocsSearchMarkdown } from './formatters.js';
 import {
@@ -52,13 +53,16 @@ import {
   GetAnnotationInputSchema,
   ManageAnnotationInputSchema,
   DeleteAnnotationInputSchema,
-  SearchDocsInputSchema
+  SearchDocsInputSchema,
+  HealthCheckInputSchema
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const usageGuidePath = path.join(__dirname, '..', 'USAGE_GUIDE.md');
 const promptsDir = path.join(__dirname, '..', 'prompts');
+
+const SERVER_NAME = 'scix-mcp';
 
 function promptPath(id: string): string {
   return path.join(promptsDir, `${id}.md`);
@@ -97,10 +101,21 @@ function errorResult(error: unknown): CallToolResult {
 }
 
 export function createServer(): McpServer {
+  const serverVersion = readServerVersion();
   const server = new McpServer({
-    name: 'scix-mcp',
-    version: readServerVersion(),
+    name: SERVER_NAME,
+    version: serverVersion,
   });
+
+  // Record each tool name as it is registered so health_check can report the
+  // live list without a second source of truth that could drift. The SDK
+  // (1.x) exposes no public accessor for registered tools; wrapping the name
+  // argument in track() means every registration is captured by construction.
+  const toolNames: string[] = [];
+  function track(name: string): string {
+    toolNames.push(name);
+    return name;
+  }
 
   // Construct the API client lazily so a missing/invalid SCIX_API_TOKEN
   // surfaces as a graceful tool error rather than an import-time crash.
@@ -114,7 +129,7 @@ export function createServer(): McpServer {
   }
 
   server.registerTool(
-    'search',
+    track('search'),
     {
       description: 'Search SciX for astronomical literature. Supports full Solr query syntax including author:"Last, F.", title:keyword, abstract:keyword, year:2020-2023, and Boolean operators (AND, OR, NOT).',
       inputSchema: SearchInputSchema,
@@ -137,7 +152,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_paper',
+    track('get_paper'),
     {
       description: 'Get detailed information about a specific paper by identifier: bibcode, DOI, arXiv ID, or SciX ID (scix:...).',
       inputSchema: GetPaperInputSchema,
@@ -160,7 +175,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_metrics',
+    track('get_metrics'),
     {
       description: 'Get citation metrics including h-index, citation counts, and paper statistics for a list of bibcodes.',
       inputSchema: MetricsInputSchema,
@@ -183,7 +198,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_citations',
+    track('get_citations'),
     {
       description: 'Get papers that cite a given paper (forward citations). Accepts a bibcode, DOI, arXiv ID, or SciX ID.',
       inputSchema: CitationsInputSchema,
@@ -206,7 +221,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_references',
+    track('get_references'),
     {
       description: 'Get papers referenced by a given paper (backward citations). Accepts a bibcode, DOI, arXiv ID, or SciX ID.',
       inputSchema: CitationsInputSchema,
@@ -229,7 +244,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'export',
+    track('export'),
     {
       description: 'Export citations in 23 bibliographic formats (BibTeX, AASTeX, EndNote, IEEE, MNRAS, etc.) with support for custom formatting templates.',
       inputSchema: ExportInputSchema,
@@ -252,7 +267,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_libraries',
+    track('get_libraries'),
     {
       description: 'Get all libraries for the authenticated user. Can filter by type (all, owner, collaborator).',
       inputSchema: GetLibrariesInputSchema,
@@ -275,7 +290,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_library',
+    track('get_library'),
     {
       description: 'Get details about a specific library including metadata and list of documents.',
       inputSchema: GetLibraryInputSchema,
@@ -298,7 +313,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'create_library',
+    track('create_library'),
     {
       description: 'Create a new library with optional initial documents.',
       inputSchema: CreateLibraryInputSchema,
@@ -321,7 +336,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'delete_library',
+    track('delete_library'),
     {
       description: 'Delete a library permanently.',
       inputSchema: DeleteLibraryInputSchema,
@@ -344,7 +359,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'edit_library',
+    track('edit_library'),
     {
       description: 'Edit library metadata (name, description, public status).',
       inputSchema: EditLibraryInputSchema,
@@ -367,7 +382,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'manage_documents',
+    track('manage_documents'),
     {
       description: 'Add or remove documents from a library.',
       inputSchema: ManageDocumentsInputSchema,
@@ -390,7 +405,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'add_documents_by_query',
+    track('add_documents_by_query'),
     {
       description: 'Add documents to a library from a SciX search query.',
       inputSchema: AddDocumentsByQueryInputSchema,
@@ -413,7 +428,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'library_operation',
+    track('library_operation'),
     {
       description: 'Perform set operations on libraries (union, intersection, difference, copy, empty).',
       inputSchema: LibraryOperationInputSchema,
@@ -436,7 +451,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_permissions',
+    track('get_permissions'),
     {
       description: 'Get permission information for a library.',
       inputSchema: GetPermissionsInputSchema,
@@ -459,7 +474,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'update_permissions',
+    track('update_permissions'),
     {
       description: 'Grant or modify permissions for a user on a library.',
       inputSchema: UpdatePermissionsInputSchema,
@@ -482,7 +497,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'transfer_library',
+    track('transfer_library'),
     {
       description: 'Transfer ownership of a library to another user.',
       inputSchema: TransferLibraryInputSchema,
@@ -505,7 +520,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'get_annotation',
+    track('get_annotation'),
     {
       description: 'Get annotation/note for a document in a library.',
       inputSchema: GetAnnotationInputSchema,
@@ -528,7 +543,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'manage_annotation',
+    track('manage_annotation'),
     {
       description: 'Add or update an annotation/note for a document in a library.',
       inputSchema: ManageAnnotationInputSchema,
@@ -551,7 +566,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'delete_annotation',
+    track('delete_annotation'),
     {
       description: 'Delete an annotation/note for a document in a library.',
       inputSchema: DeleteAnnotationInputSchema,
@@ -574,7 +589,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    'search_docs',
+    track('search_docs'),
     {
       description: 'Search SciX help documentation for information about search syntax, features, API usage, and best practices.',
       inputSchema: SearchDocsInputSchema,
@@ -589,6 +604,36 @@ export function createServer(): McpServer {
       try {
         const results = await searchDocs(input.query, input.limit);
         return textResult(formatDocsSearchMarkdown(results, input.query));
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    track('health_check'),
+    {
+      description: 'Diagnose the SciX MCP server setup: reports server name and version, the API base URL, whether an API token is configured, an authentication probe result, and the registered tool names. Takes no required arguments. Use this to distinguish setup problems (missing/invalid token, unreachable API) from ordinary API errors.',
+      inputSchema: HealthCheckInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) => {
+      try {
+        const result = await healthCheck(
+          {
+            serverName: SERVER_NAME,
+            serverVersion,
+            toolNames,
+            createClient: getClient,
+          },
+          input
+        );
+        return textResult(result);
       } catch (error) {
         return errorResult(error);
       }

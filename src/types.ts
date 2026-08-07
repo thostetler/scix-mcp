@@ -238,6 +238,30 @@ export const SearchDocsInputSchema = z.object({
 
 export type SearchDocsInput = z.infer<typeof SearchDocsInputSchema>;
 
+// Health Check
+export const HealthCheckInputSchema = z.object({
+  response_format: z.enum(ResponseFormat).default(ResponseFormat.MARKDOWN)
+});
+
+export type HealthCheckInput = z.infer<typeof HealthCheckInputSchema>;
+
+// health_check report shapes (server-produced, not an ADS response).
+export type ProbeState = 'ok' | 'unauthorized' | 'rate_limited' | 'unreachable' | 'skipped';
+
+export interface HealthProbeResult {
+  state: ProbeState;
+  // Human-readable detail for non-ok states; never contains secret material.
+  message?: string;
+}
+
+export interface HealthReport {
+  server: { name: string; version: string };
+  api_base: string;
+  token_configured: boolean;
+  probe: HealthProbeResult;
+  tools: string[];
+}
+
 // Response Types
 //
 // Plain interfaces for the ADS/SciX response shapes consumed by the tools
