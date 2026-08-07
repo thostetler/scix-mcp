@@ -9,6 +9,7 @@ import { setupMockFetch, restoreFetch } from './helpers/mockFetch.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const usageGuidePath = path.join(__dirname, '..', 'USAGE_GUIDE.md');
+const promptsDir = path.join(__dirname, '..', 'prompts');
 
 // All tools the server is expected to advertise and dispatch through the
 // MCP protocol. Parity is exercised end-to-end via an in-memory client.
@@ -191,6 +192,18 @@ describe('index server (McpServer over InMemoryTransport)', () => {
         .map((m) => (m.content as { text?: string }).text ?? '')
         .join('');
       expect(exportText).toContain('# SciX Bibliography Export Guide');
+    });
+
+    it('serves every prompt byte-identical to its prompts/<id>.md file', async () => {
+      const { client } = await connectClient();
+      for (const name of EXPECTED_PROMPT_NAMES) {
+        const prompt = await client.getPrompt({ name });
+        const served = prompt.messages
+          .map((m) => (m.content as { text?: string }).text ?? '')
+          .join('');
+        const onDisk = await readFile(path.join(promptsDir, `${name}.md`), 'utf-8');
+        expect(served, name).toBe(onDisk);
+      }
     });
   });
 
