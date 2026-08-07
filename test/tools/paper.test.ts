@@ -56,11 +56,55 @@ describe('Paper Tool', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('search/query');
-      expect(url).toContain('q=identifier%3A2024ApJ...123..456A');
+      expect(new URL(url).searchParams.get('q')).toBe(
+        'identifier:"2024ApJ...123..456A"'
+      );
       expect(url).toContain('rows=1');
 
       expect(result).toContain('Black Holes');
       expect(result).toContain('Einstein');
+    });
+
+    it('escapes embedded quotes and backslashes in the quoted query', async () => {
+      const mockFetch = setupMockFetch({
+        body: { response: { numFound: 1, docs: [{ bibcode: 'test' }] } }
+      });
+
+      await getPaper(client, {
+        bibcode: 'a"b\\c',
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(new URL(url).searchParams.get('q')).toBe('identifier:"a\\"b\\\\c"');
+    });
+
+    it('routes scix:-prefixed inputs to the scix_id field', async () => {
+      const mockFetch = setupMockFetch({
+        body: { response: { numFound: 1, docs: [{ bibcode: 'test' }] } }
+      });
+
+      await getPaper(client, {
+        bibcode: 'scix:0B2Q-7Y0X-DHHW',
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(new URL(url).searchParams.get('q')).toBe('scix_id:"scix:0B2Q-7Y0X-DHHW"');
+    });
+
+    it('normalizes the scix: prefix to lowercase while preserving the id body', async () => {
+      const mockFetch = setupMockFetch({
+        body: { response: { numFound: 1, docs: [{ bibcode: 'test' }] } }
+      });
+
+      await getPaper(client, {
+        bibcode: 'SciX:0B2Q-7Y0X-DHHW',
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(new URL(url).searchParams.get('q')).toBe('scix_id:"scix:0B2Q-7Y0X-DHHW"');
     });
 
     it('should throw error if paper not found', async () => {

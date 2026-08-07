@@ -76,6 +76,17 @@ describe('index server (McpServer over InMemoryTransport)', () => {
       expect(names).toEqual([...EXPECTED_TOOL_NAMES].sort());
     });
 
+    it('advertises accepted id types in the id-based tool descriptions', async () => {
+      const { client } = await connectClient();
+      const { tools } = await client.listTools();
+      for (const name of ['get_paper', 'get_citations', 'get_references']) {
+        const description = tools.find((t) => t.name === name)?.description ?? '';
+        expect(description, name).toMatch(/DOI/i);
+        expect(description, name).toMatch(/arxiv/i);
+        expect(description, name).toMatch(/scix/i);
+      }
+    });
+
     it('preserves tool annotations (e.g. delete_library is destructive)', async () => {
       const { client } = await connectClient();
       const { tools } = await client.listTools();

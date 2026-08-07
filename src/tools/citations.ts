@@ -2,10 +2,11 @@ import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
 import { CitationsInput, ResponseFormat } from '../types.js';
 import { formatCitationNetworkMarkdown } from '../formatters.js';
+import { buildIdentifierQuery } from '../identifier-query.js';
 
 export async function getCitations(client: SciXAPIClient, input: CitationsInput): Promise<string> {
   const params = {
-    q: `citations(identifier:${input.bibcode})`,
+    q: `citations(${buildIdentifierQuery(input.bibcode)})`,
     fl: DEFAULT_FIELDS,
     rows: input.rows,
     sort: 'citation_count desc'
@@ -24,7 +25,7 @@ export async function getCitations(client: SciXAPIClient, input: CitationsInput)
 
 export async function getReferences(client: SciXAPIClient, input: CitationsInput): Promise<string> {
   const params = {
-    q: `references(identifier:${input.bibcode})`,
+    q: `references(${buildIdentifierQuery(input.bibcode)})`,
     fl: DEFAULT_FIELDS,
     rows: input.rows,
     sort: 'citation_count desc'

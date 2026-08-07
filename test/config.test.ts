@@ -37,6 +37,10 @@ describe('config', () => {
       expect(DEFAULT_FIELDS).toContain('bibcode');
       expect(DEFAULT_FIELDS).toContain('identifier');
     });
+
+    it('omits the phantom arxiv_id field (not a real Solr field)', () => {
+      expect(DEFAULT_FIELDS).not.toContain('arxiv_id');
+    });
   });
 
   describe('getAPIKey', () => {

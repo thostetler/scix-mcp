@@ -70,13 +70,13 @@ Local MCP clients that read `.mcp/server.json` can also pick up the packaged con
 
 - `search`: Solr-powered search across SciX. Params: `query` (required), `rows` (1-100, default 10), `start` (offset, default 0), `sort` (`score desc` | `citation_count desc` | `date desc` | `date asc` | `read_count desc`, default `score desc`), `response_format` (`markdown` | `json`, default `markdown`).
   - Example queries: `author:"Einstein, A." title:relativity`, `black holes year:2020-2023`, `author:^Smith`, `dark energy AND galaxy clusters`.
-- `get_paper`: Fetch a paper by `bibcode` with optional `response_format`.
+- `get_paper`: Fetch a paper by `bibcode`, DOI, arXiv ID, or SciX ID (`scix:...`) with optional `response_format`.
 - `get_metrics`: Metrics for `bibcodes` (1-2000) with optional `response_format`; returns h-index, g-index, citation counts, usage stats.
 
 ### Citation Network
 
-- `get_citations`: Forward citations for `bibcode`; optional `rows` (1-100, default 20) and `response_format`.
-- `get_references`: Backward references for `bibcode`; optional `rows` (1-100, default 20) and `response_format`.
+- `get_citations`: Forward citations for a paper (`bibcode`, DOI, arXiv ID, or SciX ID); optional `rows` (1-100, default 20) and `response_format`.
+- `get_references`: Backward references for a paper (`bibcode`, DOI, arXiv ID, or SciX ID); optional `rows` (1-100, default 20) and `response_format`.
 
 ### Export
 

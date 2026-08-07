@@ -46,7 +46,9 @@ describe('Citations and References Tools', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('search/query');
-      expect(url).toContain('q=citations%28identifier%3A2024ApJ...123..456A%29');
+      expect(new URL(url).searchParams.get('q')).toBe(
+        'citations(identifier:"2024ApJ...123..456A")'
+      );
       expect(url).toContain('rows=10');
       expect(url).toContain('sort=citation_count+desc');
 
@@ -69,6 +71,23 @@ describe('Citations and References Tools', () => {
 
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('rows=25');
+    });
+
+    it('routes scix:-prefixed inputs to scix_id inside the citations wrapper', async () => {
+      const mockFetch = setupMockFetch({
+        body: { response: { numFound: 0, docs: [] } }
+      });
+
+      await getCitations(client, {
+        bibcode: 'SciX:0B2Q-7Y0X-DHHW',
+        rows: 10,
+        response_format: ResponseFormat.MARKDOWN
+      });
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(new URL(url).searchParams.get('q')).toBe(
+        'citations(scix_id:"scix:0B2Q-7Y0X-DHHW")'
+      );
     });
 
     it('should sort by citation count descending', async () => {
@@ -151,7 +170,9 @@ describe('Citations and References Tools', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('search/query');
-      expect(url).toContain('q=references%28identifier%3A2024ApJ...123..456A%29');
+      expect(new URL(url).searchParams.get('q')).toBe(
+        'references(identifier:"2024ApJ...123..456A")'
+      );
       expect(url).toContain('rows=10');
       expect(url).toContain('sort=citation_count+desc');
 
