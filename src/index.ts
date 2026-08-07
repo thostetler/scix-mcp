@@ -69,7 +69,13 @@ function promptPath(id: string): string {
 // package root both in the built tree and after npm install.
 function readServerVersion(): string {
   const pkgPath = path.join(__dirname, '..', 'package.json');
-  const parsed: unknown = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not read version from ${pkgPath}: ${message}`);
+  }
   if (
     typeof parsed === 'object' &&
     parsed !== null &&
