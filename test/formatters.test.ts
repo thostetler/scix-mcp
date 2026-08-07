@@ -55,6 +55,11 @@ describe('formatters', () => {
       expect(md).toContain('\n---\n\n');
     });
 
+    it('renders a subsection with an empty section as it appears in the index', () => {
+      const md = formatDocsSearchMarkdown([docResult({ section: '' })], 'q');
+      expect(md).toContain('**Section**:  > By Author');
+    });
+
     it('renders only the section when no subsection is present', () => {
       const md = formatDocsSearchMarkdown([docResult({ subsection: '' })], 'q');
       expect(md).toContain('**Section**: Searching\n');

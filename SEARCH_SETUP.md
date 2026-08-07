@@ -11,7 +11,6 @@ This search system provides efficient full-text search across SciX help document
 - **Prefix search** for partial word matching
 - **Weighted ranking** (titles boosted 4x, sections 3x, subsections 2x)
 - **Smart snippets** centered on matching terms
-- **Category filtering** (actions_docs, api_docs, faq, general_help, getting_started, library_docs, orcid_docs, policies, search_docs)
 
 ## Quick Start
 
@@ -27,7 +26,7 @@ node build/search-docs.js "how to create a library"
 ### Programmatic Usage
 
 ```typescript
-import { searchDocs, getDocById, searchByCategory, getStats } from './build/search-docs.js';
+import { searchDocs } from './build/search-docs.js';
 
 const results = await searchDocs("author search", 10);
 
@@ -35,9 +34,6 @@ results.forEach(result => {
   console.log(`${result.title} (score: ${result.score})`);
   console.log(`  ${result.snippet}`);
 });
-
-const fullDoc = await getDocById(results[0].id);
-console.log(fullDoc.content);
 ```
 
 ## API
@@ -65,41 +61,6 @@ interface SearchResult {
   category: string;
   score: number;
   snippet: string;
-}
-```
-
-### `getDocById(id)`
-
-Retrieve full document by ID.
-
-**Parameters:**
-- `id` (string): Document ID from search results
-
-**Returns:** `Promise<DocChunk | null>`
-
-### `searchByCategory(category, query?, limit?)`
-
-Search within a specific category.
-
-**Parameters:**
-- `category` (string): One of `'actions_docs'`, `'api_docs'`, `'faq'`, `'general_help'`, `'getting_started'`, `'library_docs'`, `'orcid_docs'`, `'policies'`, `'search_docs'`
-- `query` (string): Search query (optional)
-- `limit` (number): Maximum results (default: 10)
-
-**Returns:** `Promise<SearchResult[]>`
-
-### `getStats()`
-
-Get index statistics.
-
-**Returns:** `Promise<SearchStats>`
-
-```typescript
-interface SearchStats {
-  totalDocs: number;
-  byCategory: Record<string, number>;
-  byDocType: Record<string, number>;
-  avgContentLength: number;
 }
 ```
 
@@ -190,8 +151,6 @@ pnpm test search-docs
 - Field validation
 - Snippet generation
 - Ranking and scoring
-- Category filtering
-- Statistics
 
 ## Performance
 
