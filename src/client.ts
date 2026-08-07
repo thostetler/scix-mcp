@@ -57,20 +57,20 @@ export class SciXAPIClient {
     this.baseURL = SCIX_API_BASE;
   }
 
-  async get(endpoint: string, params?: Record<string, unknown>): Promise<any> {
-    return this.request('GET', endpoint, { params });
+  async get<T = unknown>(endpoint: string, params?: Record<string, unknown>): Promise<T> {
+    return this.request<T>('GET', endpoint, { params });
   }
 
-  async post(endpoint: string, data: unknown): Promise<any> {
-    return this.request('POST', endpoint, { body: data });
+  async post<T = unknown>(endpoint: string, data: unknown): Promise<T> {
+    return this.request<T>('POST', endpoint, { body: data });
   }
 
-  async put(endpoint: string, data: unknown): Promise<any> {
-    return this.request('PUT', endpoint, { body: data });
+  async put<T = unknown>(endpoint: string, data: unknown): Promise<T> {
+    return this.request<T>('PUT', endpoint, { body: data });
   }
 
-  async delete(endpoint: string): Promise<any> {
-    return this.request('DELETE', endpoint, {});
+  async delete<T = unknown>(endpoint: string): Promise<T> {
+    return this.request<T>('DELETE', endpoint, {});
   }
 
   private buildUrl(endpoint: string, params?: Record<string, unknown>): string {
@@ -91,11 +91,11 @@ export class SciXAPIClient {
     return url.toString();
   }
 
-  private async request(
+  private async request<T = unknown>(
     method: HttpMethod,
     endpoint: string,
     { params, body }: RequestOptions
-  ): Promise<any> {
+  ): Promise<T> {
     const url = this.buildUrl(endpoint, params);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -133,7 +133,12 @@ export class SciXAPIClient {
       }
 
       const trimmed = text.trim();
-      return trimmed ? JSON.parse(trimmed) : {};
+      // Single deserialization boundary: ADS responses are not runtime-
+      // validated, so the caller's generic T is trusted here (see types.ts
+      // response shapes). Keep the parse result `unknown` and assert at the
+      // return so `any` never leaks into local inference.
+      const parsed: unknown = trimmed ? JSON.parse(trimmed) : {};
+      return parsed as T;
     } catch (error: unknown) {
       clearTimeout(timeout);
       if (error instanceof Error && error.name === 'AbortError') {

@@ -1,6 +1,6 @@
 import { SciXAPIClient } from '../client.js';
 import { DEFAULT_FIELDS } from '../config.js';
-import { CitationsInput, ResponseFormat } from '../types.js';
+import { CitationsInput, ResponseFormat, SolrResponse } from '../types.js';
 import { formatCitationNetworkMarkdown } from '../formatters.js';
 import { buildIdentifierQuery } from '../identifier-query.js';
 
@@ -12,7 +12,7 @@ export async function getCitations(client: SciXAPIClient, input: CitationsInput)
     sort: 'citation_count desc'
   };
 
-  const response = await client.get('search/query', params);
+  const response = await client.get<SolrResponse>('search/query', params);
   const numFound = response.response?.numFound || 0;
   const docs = response.response?.docs || [];
 
@@ -31,7 +31,7 @@ export async function getReferences(client: SciXAPIClient, input: CitationsInput
     sort: 'citation_count desc'
   };
 
-  const response = await client.get('search/query', params);
+  const response = await client.get<SolrResponse>('search/query', params);
   const numFound = response.response?.numFound || 0;
   const docs = response.response?.docs || [];
 

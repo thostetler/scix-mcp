@@ -16,42 +16,30 @@ import {
   DeleteAnnotationInput,
   ResponseFormat,
   LibraryOperation,
-  DocumentAction
+  DocumentAction,
+  LibraryMetadata,
+  LibraryMetadataResponse,
+  GetLibraryResponse,
+  LibrariesListResponse,
+  DocumentUpdateResponse,
+  LibraryOperationResponse,
+  PermissionsResponse,
+  Annotation,
+  SolrResponse
 } from '../types.js';
-
-interface LibraryMetadata {
-  id: string;
-  name: string;
-  description: string;
-  num_documents: number;
-  date_created: string;
-  date_last_modified: string;
-  permission: string;
-  owner: string;
-  public: boolean;
-  num_users: number;
-}
-
-interface Annotation {
-  id: string;
-  bibcode: string;
-  content: string;
-  date_created: string;
-  date_last_modified: string;
-}
 
 // Get all libraries
 export async function getLibraries(
   client: SciXAPIClient,
   input: GetLibrariesInput
 ): Promise<string> {
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
 
   if (input.type !== 'all') {
     params.access_type = input.type;
   }
 
-  const data = await client.get('biblib/libraries', params);
+  const data = await client.get<LibrariesListResponse>('biblib/libraries', params);
   const libraries: LibraryMetadata[] = data.libraries || [];
 
   if (input.response_format === ResponseFormat.JSON) {
@@ -85,7 +73,7 @@ export async function getLibrary(
   client: SciXAPIClient,
   input: GetLibraryInput
 ): Promise<string> {
-  const data = await client.get(`biblib/libraries/${input.library_id}`);
+  const data = await client.get<GetLibraryResponse>(`biblib/libraries/${input.library_id}`);
   const library = data.metadata ?? data; // Some responses return metadata at the root
   const documents: string[] = data.documents || [];
 
@@ -125,7 +113,7 @@ export async function createLibrary(
   client: SciXAPIClient,
   input: CreateLibraryInput
 ): Promise<string> {
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     name: input.name,
     description: input.description || '',
     public: input.public
@@ -135,7 +123,7 @@ export async function createLibrary(
     payload.bibcodes = input.bibcodes;
   }
 
-  const data = await client.post('biblib/libraries', payload);
+  const data = await client.post<LibraryMetadataResponse>('biblib/libraries', payload);
   const library = data.metadata ?? data; // SciX may return metadata as the root object or under `metadata`
 
   if (!library || !library.name) {
@@ -173,7 +161,7 @@ export async function editLibrary(
   client: SciXAPIClient,
   input: EditLibraryInput
 ): Promise<string> {
-  const payload: Record<string, any> = {};
+  const payload: Record<string, unknown> = {};
 
   if (input.name !== undefined) {
     payload.name = input.name;
@@ -190,7 +178,7 @@ export async function editLibrary(
   }
 
   // ADS/SciX expects metadata updates on the documents endpoint, not libraries
-  const data = await client.put(`biblib/documents/${input.library_id}`, payload);
+  const data = await client.put<LibraryMetadataResponse>(`biblib/documents/${input.library_id}`, payload);
   const library = data.metadata ?? data; // Some responses return the payload at the root
 
   if (!library || !library.name) {
@@ -219,7 +207,10 @@ export async function manageDocuments(
     action: input.action
   };
 
-  const data = await client.post(`biblib/documents/${input.library_id}`, payload);
+  const data = await client.post<DocumentUpdateResponse>(
+    `biblib/documents/${input.library_id}`,
+    payload
+  );
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(data, null, 2);
@@ -239,7 +230,10 @@ export async function addDocumentsByQuery(
 
   try {
     // ADS/SciX query add endpoint lives under /biblib/documents/{id}/query
-    const data = await client.post(`biblib/documents/${input.library_id}/query`, payload);
+    const data = await client.post<DocumentUpdateResponse>(
+      `biblib/documents/${input.library_id}/query`,
+      payload
+    );
 
     if (input.response_format === ResponseFormat.JSON) {
       return JSON.stringify(data, null, 2);
@@ -257,7 +251,7 @@ export async function addDocumentsByQuery(
   }
 
   // Fallback: run a search and add the bibcodes manually if the query endpoint is unavailable
-  const searchData = await client.get('search/query', {
+  const searchData = await client.get<SolrResponse>('search/query', {
     q: input.query,
     rows: input.rows,
     fl: 'bibcode',
@@ -266,8 +260,8 @@ export async function addDocumentsByQuery(
 
   const docs = searchData?.response?.docs ?? [];
   const bibcodes = docs
-    .map((doc: any) => doc.bibcode)
-    .filter((bibcode: any) => typeof bibcode === 'string' && bibcode.length > 0);
+    .map((doc) => doc.bibcode)
+    .filter((bibcode): bibcode is string => typeof bibcode === 'string' && bibcode.length > 0);
 
   if (bibcodes.length === 0) {
     const message = `No documents found for query '${input.query}'.`;
@@ -276,10 +270,13 @@ export async function addDocumentsByQuery(
       : message;
   }
 
-  const data = await client.post(`biblib/documents/${input.library_id}`, {
-    bibcode: bibcodes,
-    action: DocumentAction.ADD
-  });
+  const data = await client.post<DocumentUpdateResponse>(
+    `biblib/documents/${input.library_id}`,
+    {
+      bibcode: bibcodes,
+      action: DocumentAction.ADD
+    }
+  );
 
   const added = data?.number_added ?? bibcodes.length;
 
@@ -304,7 +301,7 @@ export async function libraryOperation(
   client: SciXAPIClient,
   input: LibraryOperationInput
 ): Promise<string> {
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     action: input.operation
   };
 
@@ -319,7 +316,10 @@ export async function libraryOperation(
     if (input.description) payload.description = input.description;
   }
 
-  const data = await client.post(`biblib/libraries/operations/${input.library_id}`, payload);
+  const data = await client.post<LibraryOperationResponse>(
+    `biblib/libraries/operations/${input.library_id}`,
+    payload
+  );
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(data, null, 2);
@@ -342,7 +342,7 @@ export async function getPermissions(
   client: SciXAPIClient,
   input: GetPermissionsInput
 ): Promise<string> {
-  const data = await client.get(`biblib/permissions/${input.library_id}`);
+  const data = await client.get<PermissionsResponse>(`biblib/permissions/${input.library_id}`);
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(data, null, 2);
@@ -357,7 +357,7 @@ export async function getPermissions(
   if (data.collaborators && Object.keys(data.collaborators).length > 0) {
     output += `## Collaborators\n\n`;
     for (const [email, permissions] of Object.entries(data.collaborators)) {
-      output += `- **${email}**: ${(permissions as string[]).join(', ')}\n`;
+      output += `- **${email}**: ${permissions.join(', ')}\n`;
     }
   } else {
     output += 'No collaborators.\n';
@@ -410,8 +410,9 @@ export async function getAnnotation(
   client: SciXAPIClient,
   input: GetAnnotationInput
 ): Promise<string> {
-  const data = await client.get(`biblib/libraries/${input.library_id}/notes/${input.bibcode}`);
-  const annotation: Annotation = data;
+  const annotation = await client.get<Annotation>(
+    `biblib/libraries/${input.library_id}/notes/${input.bibcode}`
+  );
 
   if (input.response_format === ResponseFormat.JSON) {
     return JSON.stringify(annotation, null, 2);

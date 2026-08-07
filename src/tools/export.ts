@@ -1,5 +1,5 @@
 import { SciXAPIClient } from '../client.js';
-import { ExportInput } from '../types.js';
+import { ExportInput, ExportResponse } from '../types.js';
 
 export async function exportCitations(client: SciXAPIClient, input: ExportInput): Promise<string> {
   const toArray = <T>(value?: T | T[]): T[] | undefined => {
@@ -18,7 +18,7 @@ export async function exportCitations(client: SciXAPIClient, input: ExportInput)
     keyformat
   } = input;
 
-  const data: Record<string, any> = {
+  const data: Record<string, unknown> = {
     bibcode: bibcodes
   };
 
@@ -35,7 +35,7 @@ export async function exportCitations(client: SciXAPIClient, input: ExportInput)
   if (keyFormatArr) data.keyformat = keyFormatArr;
   if (format === 'custom' && custom_format) data.format = custom_format;
 
-  const response = await client.post(`export/${format}`, data);
+  const response = await client.post<ExportResponse>(`export/${format}`, data);
 
   return response.export || '';
 }
