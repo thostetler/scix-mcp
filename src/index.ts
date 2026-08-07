@@ -201,7 +201,7 @@ export function createServer(): McpServer {
   server.registerTool(
     'export',
     {
-      description: 'Export citations in 25+ academic formats (BibTeX, AASTeX, EndNote, IEEE, MNRAS, etc.) with support for custom formatting templates.',
+      description: 'Export citations in 23 bibliographic formats (BibTeX, AASTeX, EndNote, IEEE, MNRAS, etc.) with support for custom formatting templates.',
       inputSchema: ExportInputSchema,
       annotations: {
         readOnlyHint: true,
