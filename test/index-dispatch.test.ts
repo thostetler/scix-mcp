@@ -35,6 +35,7 @@ const EXPECTED_TOOL_NAMES = [
   'manage_annotation',
   'delete_annotation',
   'search_docs',
+  'health_check',
 ];
 
 const EXPECTED_PROMPT_NAMES = [

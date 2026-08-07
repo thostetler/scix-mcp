@@ -43,6 +43,16 @@ export const RATE_LIMIT = {
 export const REQUEST_TIMEOUT = 30000;
 
 /**
+ * Report whether a usable SCIX_API_TOKEN is present, without throwing.
+ * Mirrors getAPIKey's non-empty/trim check so callers can gate on token
+ * presence (e.g. the health_check probe) instead of catching a throw.
+ */
+export function isAPIKeyConfigured(): boolean {
+  const key = process.env.SCIX_API_TOKEN;
+  return typeof key === 'string' && key.trim() !== '';
+}
+
+/**
  * Validate and retrieve the SciX API key from environment
  * @throws Error if SCIX_API_TOKEN is not set
  */
