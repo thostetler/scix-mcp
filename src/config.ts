@@ -2,7 +2,11 @@
  * Configuration and constants for NASA SciX MCP Server
  */
 
-export const SCIX_API_BASE = 'https://api.adsabs.harvard.edu/v1';
+// Default to the production ADS API. SCIX_API_BASE can override the base URL
+// (e.g. to point the server at a local mock during e2e tests); unset behaves
+// exactly as before.
+export const SCIX_API_BASE =
+  process.env.SCIX_API_BASE || 'https://api.adsabs.harvard.edu/v1';
 
 /**
  * Default fields to retrieve in search queries

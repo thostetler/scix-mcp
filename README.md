@@ -43,6 +43,13 @@ Common locations: Claude Desktop (`~/Library/Application Support/Claude/claude_d
 
 Local MCP clients that read `.mcp/server.json` can also pick up the packaged config in `.mcp/server.json`; just drop in your `SCIX_API_TOKEN`.
 
+### Environment variables
+
+- `SCIX_API_TOKEN` (required): your SciX/ADS API key.
+- `SCIX_API_BASE` (optional): override the API base URL. Defaults to
+  `https://api.adsabs.harvard.edu/v1` when unset. Primarily used to point the
+  server at a local mock during the e2e test suite.
+
 ## Example Prompts
 
 ```text
@@ -170,7 +177,17 @@ pnpm test:watch
 
 # Run tests with coverage
 pnpm test:coverage
+
+# Run the end-to-end protocol smoke suite (builds first, then drives the
+# built server over stdio against a local mock ADS API)
+pnpm test:e2e
 ```
+
+The e2e suite (`test/e2e/protocol.test.ts`) spawns `node build/index.js`,
+connects a real MCP client over stdio, and asserts the live tool/prompt/
+resource surface plus one canned call per tool. It points the server at a
+local mock via the `SCIX_API_BASE` environment variable (see below); no real
+network access is required.
 
 ### Test Structure
 
