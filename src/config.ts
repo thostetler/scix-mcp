@@ -3,10 +3,14 @@
  */
 
 // Default to the production ADS API. SCIX_API_BASE can override the base URL
-// (e.g. to point the server at a local mock during e2e tests); unset behaves
-// exactly as before.
+// (e.g. to point the server at a local mock during e2e tests). Trim and treat
+// blank as unset — mirrors getAPIKey — so a stray/empty value can't yield an
+// invalid base that throws in `new URL(...)`.
+const configuredBase = process.env.SCIX_API_BASE?.trim();
 export const SCIX_API_BASE =
-  process.env.SCIX_API_BASE || 'https://api.adsabs.harvard.edu/v1';
+  configuredBase && configuredBase.length > 0
+    ? configuredBase
+    : 'https://api.adsabs.harvard.edu/v1';
 
 /**
  * Default fields to retrieve in search queries
