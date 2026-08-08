@@ -35,3 +35,7 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Run e2e protocol suite
+        # Reuse the build from the step above; test:e2e would rebuild.
+        run: pnpm vitest run --config vitest.e2e.config.ts
