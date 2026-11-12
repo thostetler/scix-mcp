@@ -8,12 +8,12 @@
     "source": "github"
   },
   "websiteUrl": "https://github.com/adsabs/scix-mcp",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "scix-mcp",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "transport": {
         "type": "stdio",
         "command": "npx",
